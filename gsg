@@ -1,0 +1,39 @@
+[1mdiff --git a/Code/mulltishell_prepro_28.sh b/Code/mulltishell_prepro_28.sh[m
+[1mindex 5d65b6a..ca6aadd 100644[m
+[1m--- a/Code/mulltishell_prepro_28.sh[m
+[1m+++ b/Code/mulltishell_prepro_28.sh[m
+[36m@@ -79,4 +79,4 @@[m [mfor_each sample_598/* : mrtransform IN/6_mif/T1_raw.mif -linear IN/7_mat/diff2st[m
+ [m
+ # Atlas preparation with Freesurfer[m
+ recon-all -s subject_598 -i /media/nas/nikita/sample_598/raw/2_nifti/T1.nii.gz -all -threads $(nproc --ignore=10)[m
+[31m-# at group level consider: recon-all -s <subjectName> -qcache[m
+[41m+[m
+[1mdiff --git a/Code/whole_brain_tractography.sh b/Code/whole_brain_tractography.sh[m
+[1mindex 5a3d033..28b5bbe 100644[m
+[1m--- a/Code/whole_brain_tractography.sh[m
+[1m+++ b/Code/whole_brain_tractography.sh[m
+[36m@@ -34,5 +34,21 @@[m [mfor_each sample_598/* : tckedit -include -26.5,33.95,27.41,3 IN/8_tck/sift_1mio.[m
+ for_each sample_598/* : mrtransform IN/6_mif/T1_raw.mif -linear IN/7_mat/diff2struct_mrtrix.txt -inverse IN/6_mif/t1_coreg.mif -nthreads 50 -force;[m
+ # mrview '/media/nas/nikita/sample_598/raw/6_mif/t1_coreg.mif' -tractography.load '/media/nas/nikita/sample_598/raw/8_tck/FA.tck'[m
+ [m
+[31m-#Freesurfer[m
+[31m-recon-all -s subject_598 -i /media/nas/nikita/sample_598/raw/2_nifti/T1.nii.gz -all -threads $(nproc --ignore=10)[m
+\ No newline at end of file[m
+[32m+[m[32m# Freesurfer/HCP-based atlas generation[m
+[32m+[m[32mrecon-all -s subject_598 -i /media/nas/nikita/sample_598/raw/2_nifti/T1.nii.gz -all -threads $(nproc --ignore=10)[m
+[32m+[m[32m# at group level consider: recon-all -s <subjectName> -qcache[m
+[32m+[m[32m# Mapping of HCP MMP 1.0 atlas from fsaverage onto subject[m
+[32m+[m[32mmri_surf2surf --srcsubject fsaverage --trgsubject subject_598 --hemi lh --sval-annot $SUBJECTS_DIR/fsaverage/label/lh.hcpmmp1.annot --tval $SUBJECTS_DIR/subject_598/label/lh.hcpmmp1.annot;[m
+[32m+[m[32mmri_surf2surf --srcsubject fsaverage --trgsubject subject_598 --hemi rh --sval-annot $SUBJECTS_DIR/fsaverage/label/rh.hcpmmp1.annot --tval $SUBJECTS_DIR/subject_598/label/rh.hcpmmp1.annot;[m
+[32m+[m[32m# Mapping HCP annotations onto volumetric image, subcortical segmentation.[m
+[32m+[m[32mmri_aparc2aseg --old-ribbon --s subject_598 --annot hcpmmp1 --o /media/nas/nikita/sample_598/raw/9_atlas/hcpmmp1.mgz;[m
+[32m+[m[32mmrconvert -datatype uint32 /media/nas/nikita/sample_598/raw/9_atlas/hcpmmp1.mgz /media/nas/nikita/sample_598/raw/9_atlas/hcpmmp1.mif;[m
+[32m+[m[32m# Integer ordering[m
+[32m+[m[32mlabelconvert /media/nas/nikita/sample_598/raw/9_atlas/hcpmmp1.mif /home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_original.txt /home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_ordered.txt /media/nas/nikita/sample_598/raw/9_atlas/hcpmmp1_parcels_nocoreg.mif;[m
+[32m+[m[32m# Registering atlas-based volumetric parcellation to dMRI[m
+[32m+[m[32mmrtransform /home/nikita/Structural_PIPE/hcpmmp1_parcels_nocoreg.mif -linear /media/nas/nikita/sample_598/raw/7_mat/diff2struct_mrtrix.txt -inverse -datatype uint32 /media/nas/nikita/sample_598/raw/9_atlas/hcpmmp1_parcels_coreg.mif[m
+[32m+[m
+[32m+[m[32m# Matrix Generation[m
+[32m+[m[32mtck2connectome -symmetric -zero_diagonal -scale_invnodevol /media/nas/nikita/sample_598/raw/8_tck/sift_1mio.tck /media/nas/nikita/sample_598/raw/9_atlas/hcpmmp1_parcels_coreg.mif /media/nas/nikita/sample_598/raw/9_atlas?hcpmmp1.csv -out_assignment /media/nas/nikita/sample_598/raw/9_atlas/assignments_hcpmmp1.csv[m
+[41m+[m
+[41m+[m

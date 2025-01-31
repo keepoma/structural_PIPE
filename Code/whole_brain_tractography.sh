@@ -34,5 +34,21 @@ for_each sample_598/* : tckedit -include -26.5,33.95,27.41,3 IN/8_tck/sift_1mio.
 for_each sample_598/* : mrtransform IN/6_mif/T1_raw.mif -linear IN/7_mat/diff2struct_mrtrix.txt -inverse IN/6_mif/t1_coreg.mif -nthreads 50 -force;
 # mrview '/media/nas/nikita/sample_598/raw/6_mif/t1_coreg.mif' -tractography.load '/media/nas/nikita/sample_598/raw/8_tck/FA.tck'
 
-#Freesurfer
+# Freesurfer/HCP-based atlas generation
 recon-all -s subject_598 -i /media/nas/nikita/sample_598/raw/2_nifti/T1.nii.gz -all -threads $(nproc --ignore=10)
+# at group level consider: recon-all -s <subjectName> -qcache
+# Mapping of HCP MMP 1.0 atlas from fsaverage onto subject
+mri_surf2surf --srcsubject fsaverage --trgsubject subject_598 --hemi lh --sval-annot $SUBJECTS_DIR/fsaverage/label/lh.hcpmmp1.annot --tval $SUBJECTS_DIR/subject_598/label/lh.hcpmmp1.annot;
+mri_surf2surf --srcsubject fsaverage --trgsubject subject_598 --hemi rh --sval-annot $SUBJECTS_DIR/fsaverage/label/rh.hcpmmp1.annot --tval $SUBJECTS_DIR/subject_598/label/rh.hcpmmp1.annot;
+# Mapping HCP annotations onto volumetric image, subcortical segmentation.
+mri_aparc2aseg --old-ribbon --s subject_598 --annot hcpmmp1 --o /media/nas/nikita/sample_598/raw/9_atlas/hcpmmp1.mgz;
+mrconvert -datatype uint32 /media/nas/nikita/sample_598/raw/9_atlas/hcpmmp1.mgz /media/nas/nikita/sample_598/raw/9_atlas/hcpmmp1.mif;
+# Integer ordering
+labelconvert /media/nas/nikita/sample_598/raw/9_atlas/hcpmmp1.mif /home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_original.txt /home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_ordered.txt /media/nas/nikita/sample_598/raw/9_atlas/hcpmmp1_parcels_nocoreg.mif;
+# Registering atlas-based volumetric parcellation to dMRI
+mrtransform /home/nikita/Structural_PIPE/hcpmmp1_parcels_nocoreg.mif -linear /media/nas/nikita/sample_598/raw/7_mat/diff2struct_mrtrix.txt -inverse -datatype uint32 /media/nas/nikita/sample_598/raw/9_atlas/hcpmmp1_parcels_coreg.mif
+
+# Matrix Generation
+tck2connectome -symmetric -zero_diagonal -scale_invnodevol /media/nas/nikita/sample_598/raw/8_tck/sift_1mio.tck /media/nas/nikita/sample_598/raw/9_atlas/hcpmmp1_parcels_coreg.mif /media/nas/nikita/sample_598/raw/9_atlas?hcpmmp1.csv -out_assignment /media/nas/nikita/sample_598/raw/9_atlas/assignments_hcpmmp1.csv
+
+

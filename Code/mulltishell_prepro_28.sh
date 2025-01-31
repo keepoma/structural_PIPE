@@ -79,4 +79,4 @@ for_each sample_598/* : mrtransform IN/6_mif/T1_raw.mif -linear IN/7_mat/diff2st
 
 # Atlas preparation with Freesurfer
 recon-all -s subject_598 -i /media/nas/nikita/sample_598/raw/2_nifti/T1.nii.gz -all -threads $(nproc --ignore=10)
-# at group level consider: recon-all -s <subjectName> -qcache
+
