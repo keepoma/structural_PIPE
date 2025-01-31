@@ -47,6 +47,7 @@ mrconvert -datatype uint32 /media/nas/nikita/sample_598/raw/9_atlas/hcpmmp1.mgz 
 labelconvert /media/nas/nikita/sample_598/raw/9_atlas/hcpmmp1.mif /home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_original.txt /home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_ordered.txt /media/nas/nikita/sample_598/raw/9_atlas/hcpmmp1_parcels_nocoreg.mif;
 # Registering atlas-based volumetric parcellation to dMRI
 mrtransform /home/nikita/Structural_PIPE/hcpmmp1_parcels_nocoreg.mif -linear /media/nas/nikita/sample_598/raw/7_mat/diff2struct_mrtrix.txt -inverse -datatype uint32 /media/nas/nikita/sample_598/raw/9_atlas/hcpmmp1_parcels_coreg.mif
+#mrview '/media/nas/nikita/sample_598/raw/6_mif/t1_coreg.mif' -overlay.load '/media/nas/nikita/sample_598/raw/9_atlas/hcpmmp1_parcels_coreg.mif' -overlay.colourmap random -overlay.opacity 0.4
 
 # Matrix Generation
 tck2connectome -symmetric -zero_diagonal -scale_invnodevol /media/nas/nikita/sample_598/raw/8_tck/sift_1mio.tck /media/nas/nikita/sample_598/raw/9_atlas/hcpmmp1_parcels_coreg.mif /media/nas/nikita/sample_598/raw/9_atlas?hcpmmp1.csv -out_assignment /media/nas/nikita/sample_598/raw/9_atlas/assignments_hcpmmp1.csv
