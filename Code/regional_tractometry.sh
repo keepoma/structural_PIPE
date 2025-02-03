@@ -1,3 +1,9 @@
+# DTI
+for_each sample_598/* : dwi2tensor IN/5_dwi/dwi_den_unr_pre_unbia.mif IN/5_dwi/tensor.mif;
+for_each sample_598/* : tensor2metric IN/5_dwi/tensor.mif -adc IN/5_dwi/adc.mif;
+for_each sample_598/* : tensor2metric IN/5_dwi/tensor.mif -fa IN/5_dwi/fa.mif;
+
+
 # Generating peaks from previous data
 sh2peaks wmfod_norm.mif fod_peaks.nii.gz -force
 

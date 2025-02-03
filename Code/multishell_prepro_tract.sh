@@ -32,7 +32,7 @@ for_each sample_598/* : dwi2mask IN/5_dwi/dwi_den_unr_pre_unbia.mif IN/5_dwi/mas
 # Skull stripping dwi
 for_each sample_598/* : mrcalc IN/5_dwi/dwi_den_unr_pre_unbia.mif IN/5_dwi/mask.mif -mult IN/5_dwi/dwi_den_unr_pre_unbia_skull.mif;
 
-# Fiber orientation distribution
+# Response Function estimation and fiber orientation distribution
 for_each sample_598/* : dwi2response dhollander IN/5_dwi/dwi_den_unr_pre_unbia.mif IN/5_dwi/wm.txt IN/5_dwi/gm.txt IN/5_dwi/csf.txt;
 for_each sample_598/* : dwi2fod msmt_csd -mask IN/5_dwi/mask.mif IN/5_dwi/dwi_den_unr_pre_unbia.mif IN/5_dwi/wm.txt IN/5_dwi/wm.mif IN/5_dwi/gm.txt IN/5_dwi/gm.mif IN/5_dwi/csf.txt IN/5_dwi/csf.mif;
 #check: using wm FOD
