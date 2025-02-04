@@ -1,14 +1,17 @@
-import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-df = pd.read_csv('hcpmmp1 Kopie.csv', header=None)
+# Loading matrix
+# The matrix is 379x379: 180 cortical regions on each hemisphere + 19 subcortical
+sc = np.genfromtxt('/media/nas/nikita/sample_598/raw/9_atlas/hcpmmp1.csv', delimiter=',')
 
-data = df.to_numpy(dtype=float)
-upper_bound = np.percentile(data, 99)
-data_clipped = np.clip(data, None, upper_bound)
+# Removing maximum element value to fix color coding
+upper_bound = np.percentile(sc, 99)  # 99th percentile to avoid extreme outliers
+sc_clipped = np.clip(sc, None, upper_bound)
 
-plt.imshow(data_clipped, cmap='plasma')
+# Display the SC matrix
+plt.figure(figsize=(8, 6))
+plt.imshow(sc_clipped, cmap='viridis', aspect='auto')
 plt.colorbar(label='SC Value')
 plt.title('Structural Connectivity Matrix')
 plt.show()

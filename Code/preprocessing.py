@@ -172,8 +172,6 @@ def process_subject(subject_dir, nthreads):
     ])
 
 
-
-
 def main():
     # Parser with description for --help
     parser = argparse.ArgumentParser(

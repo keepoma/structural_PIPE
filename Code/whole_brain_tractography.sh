@@ -50,6 +50,6 @@ mrtransform /home/nikita/Structural_PIPE/hcpmmp1_parcels_nocoreg.mif -linear /me
 #mrview '/media/nas/nikita/sample_598/raw/6_mif/t1_coreg.mif' -overlay.load '/media/nas/nikita/sample_598/raw/9_atlas/hcpmmp1_parcels_coreg.mif' -overlay.colourmap random -overlay.opacity 0.4
 
 # Matrix Generation
-tck2connectome -symmetric -zero_diagonal -scale_invnodevol /media/nas/nikita/sample_598/raw/8_tck/sift_1mio.tck /media/nas/nikita/sample_598/raw/9_atlas/hcpmmp1_parcels_coreg.mif /media/nas/nikita/sample_598/raw/9_atlas?hcpmmp1.csv -out_assignment /media/nas/nikita/sample_598/raw/9_atlas/assignments_hcpmmp1.csv
+tck2connectome -symmetric -zero_diagonal -scale_invnodevol /media/nas/nikita/sample_598/raw/8_tck/sift_1mio.tck /media/nas/nikita/sample_598/raw/9_atlas/hcpmmp1_parcels_coreg.mif /media/nas/nikita/sample_598/raw/9_atlas/hcpmmp1.csv -out_assignment /media/nas/nikita/sample_598/raw/9_atlas/assignments_hcpmmp1.csv
 
 
