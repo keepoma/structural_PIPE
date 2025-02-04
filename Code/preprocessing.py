@@ -155,6 +155,14 @@ def process_subject(subject_dir, nthreads):
     ])
 
     # Intensity normalization
+    """
+    For Boshra: I researched about this command and it works by 
+    1) Estimating a polynomial bias field in the log domain (this corrects for intensity inhomogeneities), 
+    2) Adjusts the multi-tissue compartment intensities so that their voxel sum converges toward a constant value.
+    3) Down weights outliers.
+    It's ran individually on each subject and they all end up on a comparable intensity scale, 
+    even without a reference subject. 
+    """
     run_cmd([
         "mtnormalise", "-nthreads", str(nthreads),
         five_path("wm.mif"), five_path("wm_norm.mif"),
@@ -162,6 +170,8 @@ def process_subject(subject_dir, nthreads):
         five_path("csf.mif"), five_path("csf_norm.mif"),
         "-mask", five_path("mask.mif"), "-force"
     ])
+
+
 
 
 def main():
@@ -191,7 +201,7 @@ def main():
 
     # Run the pipeline for each subject
     for subj_dir in subject_dirs:
-        print(f"\n=== Processing subject: {os.path.basename(subj_dir)} ===")
+        print(f"\n========= Processing subject: {os.path.basename(subj_dir)} =========")
         process_subject(subj_dir, args.nthreads)
 
 
