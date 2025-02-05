@@ -52,3 +52,5 @@ for node_a, node_b in itertools.combinations(values, 2):
     subprocess.run(command)
 
 print("Processing complete!")
+# then MERGED into 1 file using:
+# tckedit /media/nas/nikita/sample_598/raw/8_tck/speech_test/speech*.tck /media/nas/nikita/sample_598/raw/8_tck/speech_test/left_speech_merged.tck -nthreads 102

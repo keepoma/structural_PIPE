@@ -46,4 +46,4 @@ for subject_path in glob.glob(root+'/*'):
 
 # Review
 # AF left TractSeg result
-mrview "/media/nas/nikita/sample_598/raw/6_mif/t1_coreg.mif" -tractography.load "/media/nas/nikita/sample_598/raw/2_nifti/tractseg_output/FOD_iFOD2_trackings/AF_left_N100.tck" -mode 3
+# mrview "/media/nas/nikita/sample_598/raw/6_mif/t1_coreg.mif" -tractography.load "/media/nas/nikita/sample_598/raw/2_nifti/tractseg_output/FOD_iFOD2_trackings/AF_left_N100.tck" -mode 3
