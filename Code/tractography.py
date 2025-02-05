@@ -43,3 +43,7 @@ for subject_path in glob.glob(root+'/*'):
 		os.system(f"tcksample {subject_path}/2_nifti/tractseg_output/FOD_iFOD2_trackings/{tract_name}_N100.tck "
 				  f"{subject_path}/2_nifti/b0.nii.gz "
 				  f"{subject_path}/along_tract/{tract_name}_c.csv -fo")
+
+# Review
+# AF left TractSeg result
+mrview "/media/nas/nikita/sample_598/raw/6_mif/t1_coreg.mif" -tractography.load "/media/nas/nikita/sample_598/raw/2_nifti/tractseg_output/FOD_iFOD2_trackings/AF_left_N100.tck" -mode 3

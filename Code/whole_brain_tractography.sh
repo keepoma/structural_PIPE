@@ -52,4 +52,9 @@ mrtransform /home/nikita/Structural_PIPE/hcpmmp1_parcels_nocoreg.mif -linear /me
 # Matrix Generation
 tck2connectome -symmetric -zero_diagonal -scale_invnodevol /media/nas/nikita/sample_598/raw/8_tck/sift_1mio.tck /media/nas/nikita/sample_598/raw/9_atlas/hcpmmp1_parcels_coreg.mif /media/nas/nikita/sample_598/raw/9_atlas/hcpmmp1.csv -out_assignment /media/nas/nikita/sample_598/raw/9_atlas/assignments_hcpmmp1.csv
 
+# Extrating streamlines between 15 atlas regions
+# I localized 15 streamlines of interest for the speech regions of the left hemisphere and generates
+# 100+ streamlines to analyze their connections. Script in "custom_speechR_from_global.py"
+
+
 
