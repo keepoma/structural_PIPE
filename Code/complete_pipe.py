@@ -1,15 +1,19 @@
 import os
 import subprocess
 import argparse
+from bundle_pipe import process_subject
+import pandas as pd
 
 """
 General overview and reasoning behind this code:
 1) Switched from os.system() to subprocess for better output/error handling
 2) Implemented argparse for command-line arguments to make code more versatile
 3) Defined functions for code readability and reusability
+4) Import process_subject function from bundle_pipe.py. Keeps the code clean and
+facilitates troubleshooting
 """
 
-def run_cmd(cmd, verbose=True):
+def run_cmd(cmd):
     """
     Function to run a system command via subprocess.
     Prints the command and is able to raise errors.
@@ -18,7 +22,7 @@ def run_cmd(cmd, verbose=True):
     subprocess.run(cmd, check=True)
 
 
-def process_subject(subject_dir, nthreads):
+def preprocess_subject(subject_dir, nthreads):
     """
     Runs the entire preproc pipeline for one subject.
     subject_dir: str, expects path to the subject directory and
@@ -36,6 +40,9 @@ def process_subject(subject_dir, nthreads):
     five_dwi = os.path.join(subject_dir, "raw", "5_dwi")
     os.makedirs(two_nifti, exist_ok=True)
     os.makedirs(five_dwi, exist_ok=True)
+
+    # FOD peaks path for later
+    peaks_path = os.path.join(two_nifti, "fod_peaks.nii.gz")
 
     # Helper function for building paths
     def one_path(subpath):
@@ -171,16 +178,67 @@ def process_subject(subject_dir, nthreads):
         "-mask", five_path("mask.mif"), "-force"
     ])
 
+    # Generate peaks
+    run_cmd([
+        "sh2peaks",
+        five_path("wm_norm.mif"),
+        peaks_path,
+        "-force"
+    ])
+
+    # Run TractSeg for tract segmentation
+    run_cmd([
+        "TractSeg",
+        "-i", peaks_path,
+        "-o", subject_dir,
+        "--output_type", "tract_segmentation"
+    ])
+
+    # Run TractSeg for endings segmentation
+    run_cmd([
+        "TractSeg",
+        "-i", peaks_path,
+        "-o", subject_dir,
+        "--output_type", "endings_segmentation"
+    ])
+
+    # Run TractSeg for Tract Orientation Maps (TOM)
+    run_cmd([
+        "TractSeg",
+        "-i", peaks_path,
+        ".o", subject_dir,
+        "--output_type", "TOM"
+    ])
+
+    # Diffusion tensor and ADC/FA computation
+    run_cmd([
+        "dwi2tensor", "-nthreads", str(nthreads),
+        five_path("dwi_den_unr_pre_unbia.mif"),
+        five_path("tensor.mif")
+    ])
+
+    run_cmd([
+        "tensor2metric", "-nthreads", str(nthreads),
+        five_path("tensor.mif"),
+        "-adc", five_path("adc.mif")
+    ])
+
+    run_cmd([
+        "tensor2metric", "-nthreads", str(nthreads),
+        five_path("tensor.mif"),
+        "-fa", five_path("fa.mif")
+    ])
+
 
 def main():
     # Parser with description for --help
     parser = argparse.ArgumentParser(
-        description="Run MRtrix pipeline for all subjects in a root directory. WILL OVERWRITE FILES"
+        description="Run preproc pipeline for all subjects in a root directory. WILL OVERWRITE FILES"
     )
     parser.add_argument(
         "--root",
         required=True,
-        help="Path to the root folder containing subject_xxx subdirectories."
+        help="Path to the root folder containing subject subdirectories."
     )
     parser.add_argument(
         "--nthreads",
@@ -198,9 +256,12 @@ def main():
     ])
 
     # Run the pipeline for each subject
+    tract_names = pd.read_csv("tract_name.txt", header=None)[0].tolist()
     for subj_dir in subject_dirs:
-        print(f"\n========= Processing subject: {os.path.basename(subj_dir)} =========")
-        process_subject(subj_dir, args.nthreads)
+        #print(f"\n========= Preprocessing subject: {os.path.basename(subj_dir)} =========")
+        #preprocess_subject(subj_dir, args.nthreads)
+        print(f"\n========= Track generation and resampling subject: {os.path.basename(subj_dir)} =========")
+        process_subject(subj_dir,tract_names)
 
 
 if __name__ == "__main__":
