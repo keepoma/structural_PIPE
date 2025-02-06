@@ -206,7 +206,7 @@ def preprocess_subject(subject_dir, nthreads):
     run_cmd([
         "TractSeg",
         "-i", peaks_path,
-        ".o", subject_dir,
+        "-o", subject_dir,
         "--output_type", "TOM"
     ])
 
