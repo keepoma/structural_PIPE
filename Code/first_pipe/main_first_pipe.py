@@ -15,7 +15,6 @@ facilitates troubleshooting
 5) Centralized paths and cmd in helpers.py
 """
 
-
 def convert_scans(paths, nthreads):
     """
     Convert anatomical and diffusion scans into standardized NIfTI or MIF formats.
@@ -141,42 +140,23 @@ def preprocess_dwi(paths, nthreads):
     ])
 
 
-def pre_post_process_subject(subject_dir, nthreads):
+def fiber_orientation_distribution(paths, nthreads):
     """
-    This function runs the entire pipeline for one subject.
+    Performs response estimation, FOD estimation, and intensity normalization in one function.
     """
-    #Retrieve standard paths
-    paths = get_subject_paths(subject_dir)
 
-    # Confirm presence of 1_raw directory
-    if not os.path.isdir(paths["one_raw"]):
-        print(f"Warning: {paths['one_raw']} does not exist! Exiting.")
-        raise SystemExit(1)
 
-    # Creating necessary directories
-    os.makedirs(paths["two_nifti"], exist_ok=True)
-    os.makedirs(paths["five_dwi"], exist_ok=True)
-    os.makedirs(paths["mat_dir"], exist_ok=True)
-
-    # FOD peaks and Tractseg path for later
-    peaks_path = os.path.join(paths["two_nifti"], "fod_peaks.nii.gz")
-    output_dir = os.path.join(subject_dir, "tractseg_output")
-    # Call function to convert scans
-    convert_scans(paths, nthreads)
-    # Call function to preprocess dMRI data
-    preprocess_dwi(paths, nthreads)
-
-    # Helper lambda for paths in the 5_dwi folder
+    # Helper lambda for constructing file paths
     five_path = lambda subpath: os.path.join(paths["five_dwi"], subpath)
-    # Response estimation
+
     run_cmd([
         "dwi2response", "-nthreads", str(nthreads),
         "dhollander",
         five_path("dwi_den_unr_pre_unbia.mif"),
-        five_path("wm.txt"), five_path("gm.txt"), five_path("csf.txt"), "-force"
+        five_path("wm.txt"), five_path("gm.txt"), five_path("csf.txt"),
+        "-force"
     ])
 
-    # FOD estimation
     run_cmd([
         "dwi2fod", "-nthreads", str(nthreads),
         "msmt_csd",
@@ -184,11 +164,12 @@ def pre_post_process_subject(subject_dir, nthreads):
         five_path("dwi_den_unr_pre_unbia.mif"),
         five_path("wm.txt"), five_path("wm.mif"),
         five_path("gm.txt"), five_path("gm.mif"),
-        five_path("csf.txt"), five_path("csf.mif"), "-force"
+        five_path("csf.txt"), five_path("csf.mif"),
+        "-force"
     ])
 
-    # Intensity normalization
     """
+    In regards to NORMALIZATION: 
     For Boshra: I researched about this command and it works by 
     1) Estimating a polynomial bias field in the log domain (this corrects for intensity inhomogeneities), 
     2) Adjusts the multi-tissue compartment intensities so that their voxel sum converges toward a constant value.
@@ -201,10 +182,24 @@ def pre_post_process_subject(subject_dir, nthreads):
         five_path("wm.mif"), five_path("wm_norm.mif"),
         five_path("gm.mif"), five_path("gm_norm.mif"),
         five_path("csf.mif"), five_path("csf_norm.mif"),
-        "-mask", five_path("mask.mif"), "-force"
+        "-mask", five_path("mask.mif"),
+        "-force"
     ])
 
+
+def tractography_postprocessing(paths, subject_dir, nthreads):
+    """
+    Performs postprocessing steps for tractography:
+    1. Generates FOD peaks from the normalized WM FOD image.
+    2. Runs tract segmentation, endings segmentation, and generates tract orientation maps.
+    3. Computes the diffusion tensor and derives ADC and FA maps.
+    """
+
+    # Helper lambda for paths in the 5_dwi folder
+    five_path = lambda subpath: os.path.join(paths["five_dwi"], subpath)
+
     # Generate peaks
+    peaks_path = os.path.join(paths["two_nifti"], "fod_peaks.nii.gz")
     run_cmd([
         "sh2peaks",
         five_path("wm_norm.mif"),
@@ -212,7 +207,8 @@ def pre_post_process_subject(subject_dir, nthreads):
         "-force"
     ])
 
-    # Run TractSeg for tract segmentation
+    # Tract segmentation
+    output_dir = os.path.join(subject_dir, "tractseg_output")
     run_cmd([
         "TractSeg",
         "-i", peaks_path,
@@ -220,7 +216,7 @@ def pre_post_process_subject(subject_dir, nthreads):
         "--output_type", "tract_segmentation"
     ])
 
-    # Run TractSeg for endings segmentation
+    # Endings segmentation
     run_cmd([
         "TractSeg",
         "-i", peaks_path,
@@ -228,7 +224,7 @@ def pre_post_process_subject(subject_dir, nthreads):
         "--output_type", "endings_segmentation"
     ])
 
-    # Run TractSeg for Tract Orientation Maps (TOM)
+    #  Tract Orientation Maps
     run_cmd([
         "TractSeg",
         "-i", peaks_path,
@@ -255,8 +251,6 @@ def pre_post_process_subject(subject_dir, nthreads):
         "-fa", five_path("fa.mif")
     ])
 
-    # Registration of T1 to dMRI using FSL
-    register_t1_coreg(paths, nthreads)
 
 def main():
     # Parser with description for --help
@@ -284,10 +278,45 @@ def main():
     ])
 
     # Run the pipeline for each subject
-    tract_names = pd.read_csv("first_pipe/tract_name.txt", header=None)[0].tolist()
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    # Build the full path to the tract_name.txt file
+    tract_names_file = os.path.join(script_dir, "tract_name.txt")
+    tract_names = pd.read_csv(tract_names_file, header=None)[0].tolist()
+
     for subj_dir in subject_dirs:
-        print(f"\n========= Pre/postprocessing subject: {os.path.basename(subj_dir)} =========")
-        pre_post_process_subject(subj_dir, args.nthreads)
+        # Retrieve standard paths
+        paths = get_subject_paths(subj_dir)
+
+        # Confirm presence of 1_raw directory
+        if not os.path.isdir(paths["one_raw"]):
+            print(f"Warning: {paths['one_raw']} does not exist! Exiting.")
+            raise SystemExit(1)
+
+        # Creating necessary directories
+        os.makedirs(paths["two_nifti"], exist_ok=True)
+        os.makedirs(paths["five_dwi"], exist_ok=True)
+        os.makedirs(paths["mat_dir"], exist_ok=True)
+
+        # Call function to convert scans
+        print(f"\n========= Converting Scans for Subject: {os.path.basename(subj_dir)} =========")
+        convert_scans(paths, args.nthreads)
+
+        # Call function to preprocess dMRI data
+        print(f"\n========= Preprocessing dMRI Data for Subject: {os.path.basename(subj_dir)} =========")
+        preprocess_dwi(paths, args.nthreads)
+
+        # Call function for fiber orientation distribution
+        print(f"\n========= Calculating FOD for Subject: {os.path.basename(subj_dir)} =========")
+        fiber_orientation_distribution(paths, args.nthreads)
+
+        # Call for tractography postproc
+        print(f"\n========= Running tractography for Subject: {os.path.basename(subj_dir)} =========")
+        tractography_postprocessing(paths, subj_dir, args.nthreads)
+
+        # Registration of T1 to dMRI using FSL
+        print(f"\n========= Registering T1 to dMRI Space for Subject: {os.path.basename(subj_dir)} =========")
+        register_t1_coreg(paths, args.nthreads)
+
         print(f"\n========= Track generation and resampling subject: {os.path.basename(subj_dir)} =========")
         process_subject(subj_dir,tract_names)
 

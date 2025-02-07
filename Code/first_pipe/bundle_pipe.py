@@ -1,28 +1,22 @@
 import glob
 import os
-import subprocess
 import argparse
 import pandas as pd
+from helpers import run_cmd
 
 """
 This code is also able to run as a standalone if the preprocessing part is
 to be skipped
 """
 
-def run_cmd(cmd):
-    """
-    Function to run a system command via subprocess.
-    Prints the command and is able to raise errors.
-    """
-    print("Running:", " ".join(cmd))
-    subprocess.run(cmd, check=True)
-
-
 def process_subject(subject_path, tract_names, nthreads=max(4, os.cpu_count() - 10)):
     """
     Process a single subject by looping through each tract.
+    This is the only function imported from this module into main_first_pipe
     """
+
     for tract_name in tract_names:
+
         # Build file paths for segmentation files and outputs
         bundle_path = os.path.join(subject_path, "tractseg_output", "bundle_segmentations",
                                    f"{tract_name}.nii.gz")
@@ -95,11 +89,6 @@ def process_subject(subject_path, tract_names, nthreads=max(4, os.cpu_count() - 
 def process_all_subjects(root, tract_names_file="tract_name.txt", nthreads=max(4, os.cpu_count() - 10)):
     """
     Process all subject directories under the root directory.
-
-    Parameters:
-        root (str): Path to the root folder containing subject directories.
-        tract_names_file (str): Path to CSV file with tract names (one per row).
-        nthreads (int, optional): Number of threads to use. Defaults to max(1, os.cpu_count()-10).
     """
 
     # Load tract names from the CSV file; expecting one tract name per row (without header)

@@ -5,12 +5,11 @@ from helpers import run_cmd
 def register_t1_coreg(paths, nthreads):
     """
     Performs the following registration steps:
-      1. Extracts b0 volumes from the diffusion file.
-      2. Computes the mean b0 image.
-      3. Removes the temporary b0 file.
-      4. Registers the mean b0 image to the 5tt segmentation using FLIRT.
-      5. Converts the FLIRT transformation to MRtrix format.
-      6. Applies the inverse transform to the T1 image to produce a coregistered T1.
+      1. Extracts and computes b0 from dMRI
+      2. Generates 5t segmentation from raw t1
+      3. Registers mean b0 to 5tt
+      4. Converts the FLIRT transformation to MRtrix format.
+      5. Applies the inverse transform to T1 to get the coreg.
     """
 
     # Mean b0 from dMRI
@@ -44,6 +43,7 @@ def register_t1_coreg(paths, nthreads):
         "-force"
     ])
 
+    # Matrix with flirt
     diff2struct_fsl_mat = os.path.join(paths["mat_dir"], "diff2struct_fsl.mat")
     run_cmd([
         "flirt", "-in", mean_b0,
@@ -63,7 +63,7 @@ def register_t1_coreg(paths, nthreads):
         "-force"
     ])
 
-    # Step 6: Apply the inverse transform to the T1 image.
+    # Apply the inverse transform to raw T1
     t1_coreg = os.path.join(paths["mat_dir"], "t1_coreg.mif")
     run_cmd([
         "mrtransform",
@@ -75,6 +75,9 @@ def register_t1_coreg(paths, nthreads):
     ])
 
 if __name__ == "__main__":
+    """
+    Quick code used during troubleshooting 
+    """
     import argparse
     from helpers import get_subject_paths
 
@@ -100,10 +103,6 @@ if __name__ == "__main__":
         if os.path.isdir(os.path.join(root, d))
     ])
 
-    # Run the pipeline for each subject
     for subj_dir in subject_dirs:
-        # Generate the standardized paths dictionary for the test subject.
         paths = get_subject_paths(subj_dir)
-
-        # Call the registration function to test it.
         register_t1_coreg(paths, args.nthreads)
