@@ -1,0 +1,3 @@
+mrconvert /media/nas/nikita/test_study/test_559/raw/2_nifti/t1.mif /home/nikita/Structural_PIPE/Code/first_pipe/5ttgen-tmp-J28A4R/input.mif
+mrconvert input.mif T1.nii -strides -1,+2,+3
+maskfilter /home/nikita/fsl/data/standard/MNI152_T1_1mm_brain_mask_dil.nii.gz dilate mni_mask.nii -npass 4
