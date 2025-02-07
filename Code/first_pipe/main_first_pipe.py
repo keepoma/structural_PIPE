@@ -19,6 +19,7 @@ def convert_scans(paths, nthreads):
     """
     Convert anatomical and diffusion scans into standardized NIfTI or MIF formats.
     """
+
     # Helper lambda for paths from the one_raw directory
     one_path = lambda subpath: os.path.join(paths["one_raw"], subpath)
 
@@ -80,6 +81,7 @@ def preprocess_dwi(paths, nthreads):
       - Mask creation
       - Skull stripping
     """
+
     # Helper lambda for paths in the 5_dwi folder
     five_path = lambda subpath: os.path.join(paths["five_dwi"], subpath)
 
@@ -145,7 +147,6 @@ def fiber_orientation_distribution(paths, nthreads):
     Performs response estimation, FOD estimation, and intensity normalization in one function.
     """
 
-
     # Helper lambda for constructing file paths
     five_path = lambda subpath: os.path.join(paths["five_dwi"], subpath)
 
@@ -168,15 +169,7 @@ def fiber_orientation_distribution(paths, nthreads):
         "-force"
     ])
 
-    """
-    In regards to NORMALIZATION: 
-    For Boshra: I researched about this command and it works by 
-    1) Estimating a polynomial bias field in the log domain (this corrects for intensity inhomogeneities), 
-    2) Adjusts the multi-tissue compartment intensities so that their voxel sum converges toward a constant value.
-    3) Down weights outliers.
-    It's ran individually on each subject and they all end up on a comparable intensity scale, 
-    even without a reference subject. 
-    """
+    # Performs global intensity normalization
     run_cmd([
         "mtnormalise", "-nthreads", str(nthreads),
         five_path("wm.mif"), five_path("wm_norm.mif"),
@@ -277,9 +270,8 @@ def main():
         if os.path.isdir(os.path.join(root, d))
     ])
 
-    # Run the pipeline for each subject
-    script_dir = os.path.dirname(os.path.abspath(__file__))
     # Build the full path to the tract_name.txt file
+    script_dir = os.path.dirname(os.path.abspath(__file__))
     tract_names_file = os.path.join(script_dir, "tract_name.txt")
     tract_names = pd.read_csv(tract_names_file, header=None)[0].tolist()
 
@@ -298,26 +290,26 @@ def main():
         os.makedirs(paths["mat_dir"], exist_ok=True)
 
         # Call function to convert scans
-        print(f"\n========= Converting Scans for Subject: {os.path.basename(subj_dir)} =========")
+        print(f"\n========= Converting Scans for Subject: {os.path.basename(subj_dir)} =========\n")
         convert_scans(paths, args.nthreads)
 
         # Call function to preprocess dMRI data
-        print(f"\n========= Preprocessing dMRI Data for Subject: {os.path.basename(subj_dir)} =========")
+        print(f"\n========= Preprocessing dMRI Data for Subject: {os.path.basename(subj_dir)} =========\n")
         preprocess_dwi(paths, args.nthreads)
 
         # Call function for fiber orientation distribution
-        print(f"\n========= Calculating FOD for Subject: {os.path.basename(subj_dir)} =========")
+        print(f"\n========= Calculating FOD for Subject: {os.path.basename(subj_dir)} =========\n")
         fiber_orientation_distribution(paths, args.nthreads)
 
         # Call for tractography postproc
-        print(f"\n========= Running tractography for Subject: {os.path.basename(subj_dir)} =========")
+        print(f"\n========= Running tractography for Subject: {os.path.basename(subj_dir)} =========\n")
         tractography_postprocessing(paths, subj_dir, args.nthreads)
 
         # Registration of T1 to dMRI using FSL
-        print(f"\n========= Registering T1 to dMRI Space for Subject: {os.path.basename(subj_dir)} =========")
+        print(f"\n========= Registering T1 to dMRI Space for Subject: {os.path.basename(subj_dir)} =========\n")
         register_t1_coreg(paths, args.nthreads)
 
-        print(f"\n========= Track generation and resampling subject: {os.path.basename(subj_dir)} =========")
+        print(f"\n========= Track generation and resampling subject: {os.path.basename(subj_dir)} =========\n")
         process_subject(subj_dir,tract_names)
 
 

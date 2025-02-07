@@ -14,14 +14,8 @@ def run_cmd(cmd):
 def get_subject_paths(subject_dir):
     """
     Returns a dictionary of standardized paths for the given subject directory.
-
-    Expected folder structure:
-      - Raw data under <subject_dir>/raw
-      - 1_raw: <subject_dir>/raw/1_raw
-      - 2_nifti: <subject_dir>/raw/2_nifti
-      - 5_dwi: <subject_dir>/raw/5_dwi
-      - mat: <subject_dir>/mat
     """
+
     paths = {
         "raw_dir": os.path.join(subject_dir, "raw"),
         "one_raw": os.path.join(subject_dir, "raw", "1_raw"),
