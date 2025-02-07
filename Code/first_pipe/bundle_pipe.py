@@ -4,6 +4,10 @@ import subprocess
 import argparse
 import pandas as pd
 
+"""
+This code is also able to run as a standalone if the preprocessing part is
+to be skipped
+"""
 
 def run_cmd(cmd):
     """

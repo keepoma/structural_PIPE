@@ -1,8 +1,8 @@
 import os
-import subprocess
 import argparse
-from bundle_pipe import process_subject
 import pandas as pd
+from bundle_pipe import process_subject
+from helpers import run_cmd, get_subject_paths
 
 """
 General overview and reasoning behind this code:
@@ -11,82 +11,71 @@ General overview and reasoning behind this code:
 3) Defined functions for code readability and reusability
 4) Import process_subject function from bundle_pipe.py. Keeps the code clean and
 facilitates troubleshooting
+5) Centralized paths and cmd in helpers.py
 """
 
-def run_cmd(cmd):
+
+def convert_scans(paths, nthreads):
     """
-    Function to run a system command via subprocess.
-    Prints the command and is able to raise errors.
+    Convert anatomical and diffusion scans into standardized NIfTI or MIF formats.
     """
-    print("Running:", " ".join(cmd))
-    subprocess.run(cmd, check=True)
+    # Helper lambda for paths from the one_raw directory
+    one_path = lambda subpath: os.path.join(paths["one_raw"], subpath)
 
-
-def preprocess_subject(subject_dir, nthreads):
-    """
-    Runs the entire preproc pipeline for one subject.
-    subject_dir: str, expects path to the subject directory and
-    raw data in /path/to/study/subject_001/raw/1_raw/
-    nthreads: int, number of threads to pass to MRtrix commands
-    """
-    # Simplify path to 1_raw and check that it exists, stops execution if path not present
-    one_raw = os.path.join(subject_dir, "raw", "1_raw")
-    if not os.path.isdir(one_raw):
-        print(f"Warning: {one_raw} does not exist! Exiting.")
-        raise SystemExit(1)
-
-    # Create 2_nifti and 5_dwi directories inside raw
-    two_nifti = os.path.join(subject_dir, "raw", "2_nifti")
-    five_dwi = os.path.join(subject_dir, "raw", "5_dwi")
-    os.makedirs(two_nifti, exist_ok=True)
-    os.makedirs(five_dwi, exist_ok=True)
-
-    # FOD peaks path for later
-    peaks_path = os.path.join(two_nifti, "fod_peaks.nii.gz")
-
-    # Helper function for building paths
-    def one_path(subpath):
-        return os.path.join(one_raw, subpath)
-
-    # 1. Convert scans to NIFTI or MIF
+    # Convert T1 scan
     run_cmd([
         "mrconvert", "-nthreads", str(nthreads),
         "-strides", "1,2,3",
-        one_path("006_T1w_MPR"), os.path.join(two_nifti, "t1.nii.gz"),
+        one_path("006_T1w_MPR"), os.path.join(paths["two_nifti"], "t1.nii.gz"),
         "-force"
     ])
+    # Convert T2 scan
     run_cmd([
         "mrconvert", "-nthreads", str(nthreads),
         "-strides", "1,2,3",
-        one_path("008_T2w_SPC"), os.path.join(two_nifti, "t2.nii.gz"),
+        one_path("008_T2w_SPC"), os.path.join(paths["two_nifti"], "t2.nii.gz"),
         "-force"
     ])
+    # Convert dark-fluid T2 scan
     run_cmd([
         "mrconvert", "-nthreads", str(nthreads),
         "-strides", "1,2,3",
         one_path("009_t2_space_dark-fluid_sag_p2_iso_0_8"),
-        os.path.join(two_nifti, "t2_df.nii.gz"),
+        os.path.join(paths["two_nifti"], "t2_df.nii.gz"),
         "-force"
     ])
+    # Convert dMRI AP scan
     run_cmd([
         "mrconvert", "-nthreads", str(nthreads),
         "-strides", "1,2,3,4",
-        one_path("016_dMRI_dir98_AP"), os.path.join(five_dwi, "dwi_ap.mif"),
+        one_path("016_dMRI_dir98_AP"), os.path.join(paths["five_dwi"], "dwi_ap.mif"),
         "-force"
     ])
+    # Convert dMRI PA scan
     run_cmd([
         "mrconvert", "-nthreads", str(nthreads),
         "-strides", "1,2,3,4",
-        one_path("019_dMRI_dir98_PA"), os.path.join(five_dwi, "dwi_pa.mif"),
+        one_path("019_dMRI_dir98_PA"), os.path.join(paths["five_dwi"], "dwi_pa.mif"),
         "-force"
     ])
 
-    # Another helper function for building paths
-    def five_path(subpath):
-        return os.path.join(five_dwi, subpath)
 
-    # 2. Preprocessing steps
-    # Combine AP/PA
+def preprocess_dwi(paths, nthreads):
+    """
+    Preprocess the dMRI data from the 5_dwi folder. This function includes:
+      - Combining AP/PA scans
+      - Denoising
+      - Calculating residuals
+      - Gibbs unringing
+      - Motion/distortion correction
+      - Bias field correction
+      - Mask creation
+      - Skull stripping
+    """
+    # Helper lambda for paths in the 5_dwi folder
+    five_path = lambda subpath: os.path.join(paths["five_dwi"], subpath)
+
+    # Combine AP and PA scans
     run_cmd([
         "mrcat", "-nthreads", str(nthreads),
         five_path("dwi_ap.mif"), five_path("dwi_pa.mif"), five_path("dwi_all.mif"),
@@ -100,7 +89,7 @@ def preprocess_subject(subject_dir, nthreads):
         "-noise", five_path("noise.mif"), "-force"
     ])
 
-    # Residual
+    # Calculate residual (all - denoised)
     run_cmd([
         "mrcalc", "-nthreads", str(nthreads),
         five_path("dwi_all.mif"), five_path("dwi_den.mif"),
@@ -114,7 +103,7 @@ def preprocess_subject(subject_dir, nthreads):
         "-axes", "0,1", "-force"
     ])
 
-    # Motion/distortion correction with FSL
+    # Motion/distortion correction using FSL
     run_cmd([
         "dwifslpreproc", "-nthreads", str(nthreads),
         "-rpe_all", "-pe_dir", "AP",
@@ -129,19 +118,48 @@ def preprocess_subject(subject_dir, nthreads):
         "-bias", five_path("bias.mif"), "-force"
     ])
 
-    # Create mask
+    # Create a mask from the unbiaised image
     run_cmd([
         "dwi2mask", "-nthreads", str(nthreads),
         five_path("dwi_den_unr_pre_unbia.mif"), five_path("mask.mif"), "-force"
     ])
 
-    # Skull stripping
+    # Skull stripping (multiplying the image by its mask)
     run_cmd([
         "mrcalc", "-nthreads", str(nthreads),
         five_path("dwi_den_unr_pre_unbia.mif"), five_path("mask.mif"),
         "-mult", five_path("dwi_den_unr_pre_unbia_skull.mif"), "-force"
     ])
 
+
+def pre_post_process_subject(subject_dir, nthreads):
+    """
+    This function runs the entire pipeline for one subject.
+    """
+    #Retrieve standard paths
+    paths = get_subject_paths(subject_dir)
+
+    # Confirm presence of 1_raw directory
+    if not os.path.isdir(paths["one_raw"]):
+        print(f"Warning: {paths['one_raw']} does not exist! Exiting.")
+        raise SystemExit(1)
+
+    # Creating necessary directories
+    os.makedirs(paths["two_nifti"], exist_ok=True)
+    os.makedirs(paths["five_dwi"], exist_ok=True)
+    os.makedirs(paths["mat_dir"], exist_ok=True)
+
+    # FOD peaks and Tractseg path for later
+    peaks_path = os.path.join(paths["two_nifti"], "fod_peaks.nii.gz")
+    output_dir = os.path.join(subject_dir, "tractseg_output")
+
+    # Call function to convert scans
+    convert_scans(paths, nthreads)
+    # Call function to preprocess dMRI data
+    preprocess_dwi(paths, nthreads)
+
+    # Helper lambda for paths in the 5_dwi folder
+    five_path = lambda subpath: os.path.join(paths["five_dwi"], subpath)
     # Response estimation
     run_cmd([
         "dwi2response", "-nthreads", str(nthreads),
@@ -190,7 +208,7 @@ def preprocess_subject(subject_dir, nthreads):
     run_cmd([
         "TractSeg",
         "-i", peaks_path,
-        "-o", subject_dir,
+        "-o", output_dir,
         "--output_type", "tract_segmentation"
     ])
 
@@ -198,7 +216,7 @@ def preprocess_subject(subject_dir, nthreads):
     run_cmd([
         "TractSeg",
         "-i", peaks_path,
-        "-o", subject_dir,
+        "-o", output_dir,
         "--output_type", "endings_segmentation"
     ])
 
@@ -206,7 +224,7 @@ def preprocess_subject(subject_dir, nthreads):
     run_cmd([
         "TractSeg",
         "-i", peaks_path,
-        "-o", subject_dir,
+        "-o", output_dir,
         "--output_type", "TOM"
     ])
 
@@ -228,6 +246,8 @@ def preprocess_subject(subject_dir, nthreads):
         five_path("tensor.mif"),
         "-fa", five_path("fa.mif")
     ])
+
+    # Registration of T1 to dMRI using FSL
 
 
 def main():
@@ -258,8 +278,8 @@ def main():
     # Run the pipeline for each subject
     tract_names = pd.read_csv("tract_name.txt", header=None)[0].tolist()
     for subj_dir in subject_dirs:
-        #print(f"\n========= Preprocessing subject: {os.path.basename(subj_dir)} =========")
-        #preprocess_subject(subj_dir, args.nthreads)
+        print(f"\n========= Pre/postprocessing subject: {os.path.basename(subj_dir)} =========")
+        pre_post_process_subject(subj_dir, args.nthreads)
         print(f"\n========= Track generation and resampling subject: {os.path.basename(subj_dir)} =========")
         process_subject(subj_dir,tract_names)
 
