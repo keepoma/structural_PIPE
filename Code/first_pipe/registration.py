@@ -1,5 +1,5 @@
 import os
-from helpers import run_cmd
+from helpers import run_cmd, get_args
 
 
 def register_t1_coreg(paths, nthreads):
@@ -79,24 +79,9 @@ if __name__ == "__main__":
     Quick code used during troubleshooting 
     """
 
-    import argparse
     from helpers import get_subject_paths
 
-    parser = argparse.ArgumentParser(
-        description="Test the register_t1_coreg function in isolation."
-    )
-    parser.add_argument(
-        "--root",
-        default="/media/nas/nikita/test_study",
-        help="Path to a subject directory with the expected folder structure."
-    )
-    parser.add_argument(
-        "--nthreads",
-        type=int,
-        default=102,
-        help="Number of threads to use."
-    )
-    args = parser.parse_args()
+    args = get_args()
 
     root = os.path.abspath(args.root)
     subject_dirs = sorted([

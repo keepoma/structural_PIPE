@@ -2,7 +2,7 @@ import glob
 import os
 import argparse
 import pandas as pd
-from helpers import run_cmd
+from helpers import run_cmd, get_args
 
 """
 This code is also able to run as a standalone if the preprocessing part is
@@ -86,7 +86,7 @@ def process_subject(subject_path, tract_names, nthreads=max(4, os.cpu_count() - 
         ])
 
 
-def process_all_subjects(root, tract_names_file="tract_name.txt", nthreads=max(4, os.cpu_count() - 10)):
+def process_all_subjects(root, tract_names_file, nthreads=max(4, os.cpu_count() - 10)):
     """
     Process all subject directories under the root directory.
     """
@@ -103,28 +103,8 @@ def process_all_subjects(root, tract_names_file="tract_name.txt", nthreads=max(4
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Run tractography processing for each subject."
-    )
-    parser.add_argument(
-        "--root",
-        required=True,
-        help="Path to the root folder containing subject directories."
-    )
-    parser.add_argument(
-        "--tracts",
-        default="tract_name.txt",
-        help="Path to the tract names file (CSV with one tract name per row)."
-    )
-    parser.add_argument(
-        "--nthreads",
-        type=int,
-        default=max(4, os.cpu_count() - 10),
-        help="Number of threads to use (default: max(1, os.cpu_count()-10))."
-    )
-    args = parser.parse_args()
-
-    process_all_subjects(args.root, args.tracts, args.nthreads)
+    args = get_args()
+    process_all_subjects(args.root, "tract_name.txt", args.nthreads)
 
 
 if __name__ == "__main__":

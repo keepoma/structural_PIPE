@@ -1,5 +1,6 @@
 import os
 import subprocess
+import argparse
 
 
 def run_cmd(cmd):
@@ -24,3 +25,25 @@ def get_subject_paths(subject_dir):
         "mat_dir": os.path.join(subject_dir, "mat")
     }
     return paths
+
+
+def get_args():
+    """
+    Sets up and returns the parsed command-line arguments
+    """
+    parser = argparse.ArgumentParser(
+        description="Run pipeline for all subjects in a root directory. WILL OVERWRITE FILES"
+    )
+    parser.add_argument(
+        "--root",
+        required=True,
+        help="Path to the root folder containing subject subdirectories."
+    )
+    parser.add_argument(
+        "--nthreads",
+        type=int,
+        default=max(4, os.cpu_count() - 10),
+        help=("Number of threads to pass to MRtrix commands. Will attempt to use "
+              "max available threads - 10, if not possible attempts 4.")
+    )
+    return parser.parse_args()

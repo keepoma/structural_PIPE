@@ -1,7 +1,7 @@
 import os
 import argparse
 import pandas as pd
-from helpers import run_cmd, get_subject_paths
+from helpers import run_cmd, get_subject_paths, get_args
 from bundle_pipe import process_subject
 from registration import register_t1_coreg
 
@@ -241,22 +241,8 @@ def tractography_postprocessing(paths, subject_dir, nthreads):
 
 
 def main():
-    # Parser with description for --help
-    parser = argparse.ArgumentParser(
-        description="Run pipeline for all subjects in a root directory. WILL OVERWRITE FILES"
-    )
-    parser.add_argument(
-        "--root",
-        required=True,
-        help="Path to the root folder containing subject subdirectories."
-    )
-    parser.add_argument(
-        "--nthreads",
-        type=int,
-        default=max(4, os.cpu_count() - 10),
-        help="Number of threads to pass to MRtrix commands. Will attempt to use max available threads - 10, if not possible attempts 4."
-    )
-    args = parser.parse_args()
+    # Runs the helper module for cmd arguments
+    args = get_args()
 
     # Creates an alphabetically sorted list of absolute paths to directories under given root. Ignores non-directories
     root = os.path.abspath(args.root)
