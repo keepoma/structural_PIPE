@@ -6,14 +6,9 @@ from bundle_pipe import process_subject
 from registration import register_t1_coreg
 
 """
-General overview and reasoning behind this code:
-1) Switched from os.system() to subprocess for better output/error handling
-2) Implemented argparse for command-line arguments to make code more versatile
-3) Defined functions for code readability and reusability
-4) Import process_subject function from bundle_pipe.py. Keeps the code clean and
-facilitates troubleshooting
-5) Centralized paths and cmd in helpers.py
+Main pipeline code. Imports functions from other modules for reusability.
 """
+
 
 def convert_scans(paths, nthreads):
     """
@@ -248,7 +243,7 @@ def tractography_postprocessing(paths, subject_dir, nthreads):
 def main():
     # Parser with description for --help
     parser = argparse.ArgumentParser(
-        description="Run preproc pipeline for all subjects in a root directory. WILL OVERWRITE FILES"
+        description="Run pipeline for all subjects in a root directory. WILL OVERWRITE FILES"
     )
     parser.add_argument(
         "--root",
@@ -309,8 +304,9 @@ def main():
         print(f"\n========= Registering T1 to dMRI Space for Subject: {os.path.basename(subj_dir)} =========\n")
         register_t1_coreg(paths, args.nthreads)
 
-        print(f"\n========= Track generation and resampling subject: {os.path.basename(subj_dir)} =========\n")
-        process_subject(subj_dir,tract_names)
+        print(f"\n========= Track generation and resampling Subject: {os.path.basename(subj_dir)} =========\n")
+        process_subject(subj_dir, tract_names)
+        print(f"\n========= Subject: {os.path.basename(subj_dir)} COMPLETE =========\n")
 
 
 if __name__ == "__main__":

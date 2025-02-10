@@ -1,0 +1,1 @@
+/home/nikita/anaconda3/bin/5ttgen fsl /media/nas/nikita/test_study2_1sub/test_588/raw/2_nifti/t1.mif /media/nas/nikita/test_study2_1sub/test_588/raw/2_nifti/5tt_nocoreg.mif -force
