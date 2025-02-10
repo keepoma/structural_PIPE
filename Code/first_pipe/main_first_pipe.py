@@ -1,9 +1,9 @@
 import os
-import argparse
 import pandas as pd
 from helpers import run_cmd, get_subject_paths, get_args
 from bundle_pipe import process_subject
 from registration import register_t1_coreg
+from Code.statistical_analysis import compute_group_response_functions
 
 """
 Main pipeline code. Imports functions from other modules for reusability.

@@ -1,98 +1,163 @@
 import os
+from contextlib import contextmanager
 from first_pipe.helpers import run_cmd, get_subject_paths, get_args
 
-"""
-Code intended for statistical analysis
-1. Conduct fixel-based analysis
-"""
+@contextmanager
+def change_dir(new_dir):
+    """
+    Context manager for temporarily changing the working directory
+    """
 
-# Estimate mean response function across whole group
-def compute_group_response_functions(root, output_dir, nthreads):
+    old_dir = os.getcwd()
+    try:
+        os.chdir(new_dir)
+        yield
+    finally:
+        os.chdir(old_dir)
 
-    os.makedirs(output_dir, exist_ok=True)
+def get_subject_dirs(root, exclude="group_analysis"):
+    """
+    Return a sorted list of subject directories excluding a specific folder
+    """
 
-    # Get a sorted list of subject directories under the given root and
-    # Exclude any folder that should not be considered a subject (e.g., "group_analysis")
-    subject_dirs = sorted([
+    return sorted([
         os.path.join(root, d)
         for d in os.listdir(root)
-        if os.path.isdir(os.path.join(root, d)) and d != "group_analysis"
+        if os.path.isdir(os.path.join(root, d)) and d != exclude
     ])
 
-    # Lists to collect individual response function file paths.
-    wm_files = []
-    gm_files = []
-    csf_files = []
+def compute_group_response_functions(root, output_dir, nthreads):
+    os.makedirs(output_dir, exist_ok=True)
+    subject_dirs = get_subject_dirs(root)
 
-    # Iterate over each subject and retrieve response function files.
+    # List of tissue types to process.
+    tissue_types = ["wm", "gm", "csf"]
+    # Dictionary to hold file paths for each tissue type.
+    response_files = {tissue: [] for tissue in tissue_types}
+
+    # Gather response function files for each subject.
     for subj_dir in subject_dirs:
         paths = get_subject_paths(subj_dir)
+        for tissue in tissue_types:
+            tissue_file = os.path.join(paths["five_dwi"], f"{tissue}.txt")
+            if os.path.isfile(tissue_file):
+                response_files[tissue].append(tissue_file)
+            else:
+                print(f"Warning: {tissue_file} not found in subject {subj_dir}")
 
-        wm_file = os.path.join(paths["five_dwi"], "wm.txt")
-        gm_file = os.path.join(paths["five_dwi"], "gm.txt")
-        csf_file = os.path.join(paths["five_dwi"], "csf.txt")
-
-        if os.path.isfile(wm_file):
-            wm_files.append(wm_file)
+    # Run the responsemean command for each tissue type.
+    for tissue in tissue_types:
+        group_file = os.path.join(output_dir, f"group_average_response_{tissue}.txt")
+        if response_files[tissue]:
+            run_cmd([
+                "responsemean",
+                *response_files[tissue],
+                group_file,
+                "-nthreads", str(nthreads),
+                "-force"
+            ])
         else:
-            print(f"Warning: {wm_file} not found in subject {subj_dir}")
+            print(f"No {tissue.upper()} response files found.")
 
-        if os.path.isfile(gm_file):
-            gm_files.append(gm_file)
-        else:
-            print(f"Warning: {gm_file} not found in subject {subj_dir}")
+def build_and_register_fod_template(root, nthreads, voxel_size="1.75"):
+    group_analysis_dir = os.path.join(root, "group_analysis")
+    template_dir = os.path.join(group_analysis_dir, "template")
+    fod_input_dir = os.path.join(template_dir, "fod_input")
+    mask_input_dir = os.path.join(template_dir, "mask_input")
 
-        if os.path.isfile(csf_file):
-            csf_files.append(csf_file)
-        else:
-            print(f"Warning: {csf_file} not found in subject {subj_dir}")
+    os.makedirs(fod_input_dir, exist_ok=True)
+    os.makedirs(mask_input_dir, exist_ok=True)
 
-    # Define output file paths for the group-average response functions.
-    group_wm = os.path.join(output_dir, "group_average_response_wm.txt")
-    group_gm = os.path.join(output_dir, "group_average_response_gm.txt")
-    group_csf = os.path.join(output_dir, "group_average_response_csf.txt")
+    subject_dirs = get_subject_dirs(root)
 
-    # Build and run the MRtrix3 'responsemean' command for WM.
-    if wm_files:
-        run_cmd([
-            "responsemean",
-            *wm_files,
-            group_wm,
-            "-nthreads", str(nthreads),
-            "-force"
-        ])
-    else:
-        print("No WM response files found.")
+    # Copy each subject's normalized FOD image and mask into the template directories.
+    for subj_dir in subject_dirs:
+        subject_id = os.path.basename(subj_dir)
+        paths = get_subject_paths(subj_dir)
 
-    # Build and run the MRtrix3 'responsemean' command for GM.
-    if gm_files:
-        run_cmd([
-            "responsemean",
-            *gm_files,
-            group_gm,
-            "-nthreads", str(nthreads),
-            "-force"
-        ])
-    else:
-        print("No GM response files found.")
+        # Mapping file types to their respective source file names and destination directories.
+        files_to_copy = {
+            "fod": ("wm_norm.mif", fod_input_dir),
+            "mask": ("mask.mif", mask_input_dir)
+        }
 
-    # Build and run the MRtrix3 'responsemean' command for CSF.
-    if csf_files:
-        run_cmd([
-            "responsemean",
-            *csf_files,
-            group_csf,
-            "-nthreads", str(nthreads),
-            "-force"
-        ])
-    else:
-        print("No CSF response files found.")
+        for key, (src_filename, dest_dir) in files_to_copy.items():
+            src_path = os.path.join(paths["five_dwi"], src_filename)
+            dest_path = os.path.join(dest_dir, f"{subject_id}.mif")
+            run_cmd(["cp", src_path, dest_path])
 
-    print("Group-average response functions computed and saved.")
+    output_template = os.path.join(template_dir, "wmfod_template.mif")
+    run_cmd([
+        "population_template",
+        fod_input_dir,
+        "-mask_dir", mask_input_dir,
+        output_template,
+        "-voxel_size", voxel_size,
+        "-nthreads", str(nthreads),
+        "-force"
+    ])
 
+    # Register each subject's FOD image to the template.
+    for subj_dir in subject_dirs:
+        paths = get_subject_paths(subj_dir)
+        fod_dir = paths["five_dwi"]
+        with change_dir(fod_dir):
+            cmd = [
+                "mrregister",
+                "wm_norm.mif",
+                "-mask1", "mask.mif",  # Changed from "dwi_mask_upsampled.mif" to "mask.mif"
+                os.path.relpath(output_template, fod_dir),
+                "-nl_warp", "subject2template_warp.mif", "template2subject_warp.mif",
+                "-nthreads", str(nthreads),
+                "-force"
+            ]
+            run_cmd(cmd)
+
+def warp_masks_and_create_template_mask(root, nthreads):
+    subject_dirs = get_subject_dirs(root)
+    warped_mask_paths = []
+
+    # Warp each subject's mask into template space.
+    for subj_dir in subject_dirs:
+        paths = get_subject_paths(subj_dir)
+        fod_dir = paths["five_dwi"]
+        with change_dir(fod_dir):
+            input_mask = "mask.mif"  # Changed from "dwi_mask_upsampled.mif" to "mask.mif"
+            warp_file = "subject2template_warp.mif"
+            output_warped_mask = "mask_in_template_space.mif"
+            run_cmd([
+                "mrtransform",
+                input_mask,
+                "-warp", warp_file,
+                "-interp", "nearest",
+                "-datatype", "bit",
+                output_warped_mask,
+                "-nthreads", str(nthreads),
+                "-force"
+            ])
+            warped_mask_paths.append(os.path.join(os.getcwd(), output_warped_mask))
+
+    template_mask = os.path.join(root, "group_analysis", "template", "template_mask.mif")
+    run_cmd([
+        "mrmath",
+        *warped_mask_paths,
+        "min",
+        template_mask,
+        "-datatype", "bit",
+        "-nthreads", str(nthreads),
+        "-force"
+    ])
 
 if __name__ == "__main__":
     args = get_args()
     root = os.path.abspath(args.root)
     group_output_directory = os.path.join(root, "group_analysis")
+
+    # Compute group-average response functions.
     compute_group_response_functions(root, group_output_directory, args.nthreads)
+
+    # Build the FOD template and register subjects.
+    build_and_register_fod_template(root, args.nthreads)
+
+    # Warp masks and compute the intersection template mask.
+    warp_masks_and_create_template_mask(root, args.nthreads)
