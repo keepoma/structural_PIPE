@@ -182,18 +182,6 @@ def fiber_orientation_distribution(paths, nthreads):
         "-force"
     ])
 
-
-def tractography_postprocessing(paths, subject_dir, nthreads):
-    """
-    Performs postprocessing steps for tractography:
-    1. Generates FOD peaks from the normalized WM FOD image.
-    2. Runs tract segmentation, endings segmentation, and generates tract orientation maps.
-    3. Computes the diffusion tensor and derives ADC and FA maps.
-    """
-
-    # Helper lambda for paths in the 5_dwi folder
-    five_path = lambda subpath: os.path.join(paths["five_dwi"], subpath)
-
     # Generate peaks
     peaks_path = os.path.join(paths["two_nifti"], "fod_peaks.nii.gz")
     run_cmd([
@@ -203,6 +191,19 @@ def tractography_postprocessing(paths, subject_dir, nthreads):
         "-force"
     ])
 
+
+def tractseg_and_tensor(paths, subject_dir, nthreads):
+    """
+    Performs postprocessing steps for tractography:
+    1. Generates FOD peaks from the normalized WM FOD image.
+    2. Runs tract segmentation, endings segmentation, and generates tract orientation maps.
+    3. Computes the diffusion tensor and derives ADC and FA maps.
+    """
+
+    # Helper lambda for paths in the 5_dwi folder
+    five_path = lambda subpath: os.path.join(paths["five_dwi"], subpath)
+    peaks_path = os.path.join(paths["two_nifti"], "fod_peaks.nii.gz")
+    
     # Tract segmentation
     output_dir = os.path.join(subject_dir, "tractseg_output")
     run_cmd([
@@ -292,7 +293,7 @@ def main():
 
         # Call for tractography postproc
         print(f"\n========= Running tractography for Subject: {os.path.basename(subj_dir)} =========\n")
-        tractography_postprocessing(paths, subj_dir, args.nthreads)
+        tractseg_and_tensor(paths, subj_dir, args.nthreads)
 
         # Registration of T1 to dMRI using FSL
         print(f"\n========= Registering T1 to dMRI Space for Subject: {os.path.basename(subj_dir)} =========\n")
