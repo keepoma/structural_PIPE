@@ -283,7 +283,7 @@ def main():
         # Prompt the user for each folder name (with defaults provided).
         t1_folder = prompt_for_folder("006_T1w_MPR", "T1 scan")
         t2_folder = prompt_for_folder("008_T2w_SPC", "T2 scan")
-        t2_df_folder = prompt_for_folder("009_t2_space_dark-fluid_sag_p2_iso_0_8", "dark-fluid T2 scan")
+        t2_df_folder = prompt_for_folder("009_t2_space_dark-fluid_sag_p2_iso_0_8", "T2 FLAIR")
         dwi_ap_folder = prompt_for_folder("016_dMRI_dir98_AP", "dMRI AP scan")
         dwi_pa_folder = prompt_for_folder("019_dMRI_dir98_PA", "dMRI PA scan")
 
