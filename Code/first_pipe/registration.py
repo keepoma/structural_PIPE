@@ -2,20 +2,18 @@ import os
 from helpers import run_cmd, get_args
 
 
-def register_t1_coreg(paths, nthreads):
+def register_t1_to_dwi(paths, nthreads):
     """
-    Performs the following registration steps:
-      1. Extracts and computes b0 from dMRI
-      2. Generates 5t segmentation from raw t1
-      3. Registers mean b0 to 5tt
-      4. Converts the FLIRT transformation to MRtrix format.
-      5. Applies the inverse transform to T1 to get the coreg.
+    Generates structural to diffusion transformation matrix
+    Registers T1 to diffusion space
     """
 
     # Mean b0 from dMRI
     dwi_input = os.path.join(paths["five_dwi"], "dwi_den_unr_pre_unbia.mif")
     b0_temp = os.path.join(paths["five_dwi"], "b0.nii.gz")
     mean_b0 = os.path.join(paths["two_nifti"], "mean_b0.nii.gz")
+    mean_b0_newor = os.path.join(paths["two_nifti"], "mean_b0_newor.nii.gz")
+
     run_cmd([
         "dwiextract", dwi_input,
         "-bzero", b0_temp, "-force"
@@ -26,11 +24,17 @@ def register_t1_coreg(paths, nthreads):
     ])
 
     run_cmd([
+        "mrconvert", "-strides 1,2,3,4",
+        mean_b0, mean_b0_newor, "-force"
+    ])
+
+    run_cmd([
         "rm", b0_temp
     ])
 
     # 5tt T1
     t1_mif = os.path.join(paths["two_nifti"], "t1.mif")
+    t1_nii = os.path.join(paths["two_nifti"], "t1.nii.gz")
     fivett_nocoreg_mif = os.path.join(paths["two_nifti"], "5tt_nocoreg.mif")
     run_cmd([
         "5ttgen", "fsl", t1_mif,
@@ -44,21 +48,22 @@ def register_t1_coreg(paths, nthreads):
     ])
 
     # Matrix with flirt
-    diff2struct_fsl_mat = os.path.join(paths["mat_dir"], "diff2struct_fsl.mat")
+    struct2diff_fsl = os.path.join(paths["mat_dir"], "struct2diff_fsl.mat")
     run_cmd([
-        "flirt", "-in", mean_b0,
-        "-ref", fivett_nocoreg_nii, "-dof", "6",
-        "-omat", diff2struct_fsl_mat
+        "flirt", "-in", t1_nii,
+        "-ref", mean_b0_newor, "-cost", "normmi",
+        "-dof", "6",
+        "-omat", struct2diff_fsl
     ])
 
-    diff2struct_mrtrix_txt = os.path.join(paths["mat_dir"], "diff2struct_mrtrix.txt")
+    struct2diff_mrtrix = os.path.join(paths["mat_dir"], "struct2diff_mrtrix.txt")
     run_cmd([
         "transformconvert",
-        diff2struct_fsl_mat,
-        mean_b0,
-        fivett_nocoreg_nii,
+        struct2diff_fsl,
+        t1_nii,
+        mean_b0_newor,
         "flirt_import",
-        diff2struct_mrtrix_txt,
+        struct2diff_mrtrix,
         "-nthreads", str(nthreads),
         "-force"
     ])
@@ -68,7 +73,7 @@ def register_t1_coreg(paths, nthreads):
     run_cmd([
         "mrtransform",
         t1_mif,
-        "-linear", diff2struct_mrtrix_txt,
+        "-linear", struct2diff_mrtrix,
         "-inverse", t1_coreg,
         "-nthreads", str(nthreads),
         "-force"
@@ -91,4 +96,4 @@ if __name__ == "__main__":
 
     for subj_dir in subject_dirs:
         paths = get_subject_paths(subj_dir)
-        register_t1_coreg(paths, args.nthreads)
+        register_t1_to_dwi(paths, args.nthreads)

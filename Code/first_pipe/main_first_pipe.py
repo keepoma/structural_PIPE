@@ -2,8 +2,7 @@ import os
 import pandas as pd
 from helpers import run_cmd, get_subject_paths, get_args
 from bundle_pipe import process_subject
-from registration import register_t1_coreg
-from Code.statistical_analysis import compute_group_response_functions
+from registration import register_t1_to_dwi
 
 """
 Main pipeline code. Imports functions from other modules for reusability.
@@ -29,6 +28,7 @@ def convert_scans(paths, nthreads):
     ])
     run_cmd([
         "mrconvert", "-nthreads", str(nthreads),
+        "-strides", "1,2,3",
         t1_nii,
         t1_mif,
         "-force"
@@ -123,7 +123,15 @@ def preprocess_dwi(paths, nthreads):
         "-bias", five_path("bias.mif"), "-force"
     ])
 
-    # Create a mask from the unbiaised image
+    # Strides correction
+    run_cmd([
+        "mrconvert", "-strides 1,2,3,4",
+        five_path("dwi_den_unr_pre_unbia.mif"),
+        five_path("dwi_den_unr_pre_unbia_newor.mif"),
+        "-force"
+    ])
+
+    # Create a mask from the unbiased image
     run_cmd([
         "dwi2mask", "-nthreads", str(nthreads),
         five_path("dwi_den_unr_pre_unbia.mif"), five_path("mask.mif"), "-force"
@@ -288,7 +296,7 @@ def main():
 
         # Registration of T1 to dMRI using FSL
         print(f"\n========= Registering T1 to dMRI Space for Subject: {os.path.basename(subj_dir)} =========\n")
-        register_t1_coreg(paths, args.nthreads)
+        register_t1_to_dwi(paths, args.nthreads)
 
         print(f"\n========= Track generation and resampling Subject: {os.path.basename(subj_dir)} =========\n")
         process_subject(subj_dir, tract_names)

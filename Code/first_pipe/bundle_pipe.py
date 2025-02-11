@@ -1,6 +1,5 @@
 import glob
 import os
-import argparse
 import pandas as pd
 from helpers import run_cmd, get_args
 
@@ -8,6 +7,7 @@ from helpers import run_cmd, get_args
 This code is also able to run as a standalone if the preprocessing part is
 to be skipped
 """
+
 
 def process_subject(subject_path, tract_names, nthreads=max(4, os.cpu_count() - 10)):
     """
