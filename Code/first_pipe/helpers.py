@@ -47,3 +47,13 @@ def get_args():
               "max available threads - 10, if not possible attempts 4.")
     )
     return parser.parse_args()
+
+
+def prompt_for_folder(default, description):
+    """
+    Prompts the user for a folder name with a given description.
+    Returns the user's input or the default if nothing is entered.
+    """
+
+    user_input = input(f"Enter folder name for {description} [default: {default}] (press Enter for default: ").strip()
+    return user_input if user_input else default

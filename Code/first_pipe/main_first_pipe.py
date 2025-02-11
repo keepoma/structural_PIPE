@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from helpers import run_cmd, get_subject_paths, get_args
+from helpers import run_cmd, get_subject_paths, get_args, prompt_for_folder
 from bundle_pipe import process_subject
 from registration import register_t1_to_dwi
 
@@ -9,7 +9,7 @@ Main pipeline code. Imports functions from other modules for reusability.
 """
 
 
-def convert_scans(paths, nthreads):
+def convert_scans(paths, nthreads, t1_folder, t2_folder, t2_df_folder, dwi_ap_folder, dwi_pa_folder):
     """
     Convert anatomical and diffusion scans into standardized NIfTI or MIF formats.
     """
@@ -23,7 +23,7 @@ def convert_scans(paths, nthreads):
     run_cmd([
         "mrconvert", "-nthreads", str(nthreads),
         "-strides", "1,2,3",
-        one_path("006_T1w_MPR"), t1_nii,
+        one_path(t1_folder), t1_nii,
         "-force"
     ])
     run_cmd([
@@ -33,18 +33,19 @@ def convert_scans(paths, nthreads):
         t1_mif,
         "-force"
     ])
+
     # Convert T2 scan
     run_cmd([
         "mrconvert", "-nthreads", str(nthreads),
         "-strides", "1,2,3",
-        one_path("008_T2w_SPC"), os.path.join(paths["two_nifti"], "t2.nii.gz"),
+        one_path(t2_folder  ), os.path.join(paths["two_nifti"], "t2.nii.gz"),
         "-force"
     ])
     # Convert dark-fluid T2 scan
     run_cmd([
         "mrconvert", "-nthreads", str(nthreads),
         "-strides", "1,2,3",
-        one_path("009_t2_space_dark-fluid_sag_p2_iso_0_8"),
+        one_path(t2_df_folder),
         os.path.join(paths["two_nifti"], "t2_df.nii.gz"),
         "-force"
     ])
@@ -52,14 +53,14 @@ def convert_scans(paths, nthreads):
     run_cmd([
         "mrconvert", "-nthreads", str(nthreads),
         "-strides", "1,2,3,4",
-        one_path("016_dMRI_dir98_AP"), os.path.join(paths["five_dwi"], "dwi_ap.mif"),
+        one_path(dwi_ap_folder), os.path.join(paths["five_dwi"], "dwi_ap.mif"),
         "-force"
     ])
     # Convert dMRI PA scan
     run_cmd([
         "mrconvert", "-nthreads", str(nthreads),
         "-strides", "1,2,3,4",
-        one_path("019_dMRI_dir98_PA"), os.path.join(paths["five_dwi"], "dwi_pa.mif"),
+        one_path(dwi_pa_folder), os.path.join(paths["five_dwi"], "dwi_pa.mif"),
         "-force"
     ])
 
@@ -203,7 +204,7 @@ def tractseg_and_tensor(paths, subject_dir, nthreads):
     # Helper lambda for paths in the 5_dwi folder
     five_path = lambda subpath: os.path.join(paths["five_dwi"], subpath)
     peaks_path = os.path.join(paths["two_nifti"], "fod_peaks.nii.gz")
-    
+
     # Tract segmentation
     output_dir = os.path.join(subject_dir, "tractseg_output")
     run_cmd([
@@ -279,9 +280,16 @@ def main():
         os.makedirs(paths["five_dwi"], exist_ok=True)
         os.makedirs(paths["mat_dir"], exist_ok=True)
 
+        # Prompt the user for each folder name (with defaults provided).
+        t1_folder = prompt_for_folder("006_T1w_MPR", "T1 scan")
+        t2_folder = prompt_for_folder("008_T2w_SPC", "T2 scan")
+        t2_df_folder = prompt_for_folder("009_t2_space_dark-fluid_sag_p2_iso_0_8", "dark-fluid T2 scan")
+        dwi_ap_folder = prompt_for_folder("016_dMRI_dir98_AP", "dMRI AP scan")
+        dwi_pa_folder = prompt_for_folder("019_dMRI_dir98_PA", "dMRI PA scan")
+
         # Call function to convert scans
         print(f"\n========= Converting Scans for Subject: {os.path.basename(subj_dir)} =========\n")
-        convert_scans(paths, args.nthreads)
+        convert_scans(paths, args.nthreads, t1_folder, t2_folder, t2_df_folder, dwi_ap_folder, dwi_pa_folder)
 
         # Call function to preprocess dMRI data
         print(f"\n========= Preprocessing dMRI Data for Subject: {os.path.basename(subj_dir)} =========\n")
