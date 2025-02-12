@@ -55,5 +55,5 @@ def prompt_for_folder(default, description):
     Returns the user's input or the default if nothing is entered.
     """
 
-    user_input = input(f"Enter folder name for {description} [default: {default}] (press Enter for default: ").strip()
+    user_input = input(f"Enter folder name for {description} [default: {default}] (press Enter for default): ").strip()
     return user_input if user_input else default

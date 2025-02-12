@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 from helpers import run_cmd, get_subject_paths, get_args, prompt_for_folder
-from bundle_pipe import process_subject
+from tractography_TractSeg import tractography_resample_and_extract_metrics
 from registration import register_t1_to_dwi
 
 """
@@ -146,7 +146,7 @@ def preprocess_dwi(paths, nthreads):
     ])
 
 
-def fiber_orientation_distribution(paths, nthreads):
+def RF_FOD_normalization_peaks(paths, nthreads):
     """
     Performs response estimation, FOD estimation, and intensity normalization in one function.
     """
@@ -193,16 +193,12 @@ def fiber_orientation_distribution(paths, nthreads):
     ])
 
 
-def tractseg_and_tensor(paths, subject_dir, nthreads):
+def tractseg(paths, subject_dir):
     """
-    Performs postprocessing steps for tractography:
-    1. Generates FOD peaks from the normalized WM FOD image.
-    2. Runs tract segmentation, endings segmentation, and generates tract orientation maps.
-    3. Computes the diffusion tensor and derives ADC and FA maps.
+    Runs tract segmentation, endings segmentation, and generates tract orientation maps.
     """
 
     # Helper lambda for paths in the 5_dwi folder
-    five_path = lambda subpath: os.path.join(paths["five_dwi"], subpath)
     peaks_path = os.path.join(paths["two_nifti"], "fod_peaks.nii.gz")
 
     # Tract segmentation
@@ -229,6 +225,14 @@ def tractseg_and_tensor(paths, subject_dir, nthreads):
         "-o", output_dir,
         "--output_type", "TOM"
     ])
+
+
+def tensor_and_scalar_metrics(paths, nthreads):
+    """
+    Runs diffusion tensor and computes related metrics
+    """
+
+    five_path = lambda subpath: os.path.join(paths["five_dwi"], subpath)
 
     # Diffusion tensor and ADC/FA computation
     run_cmd([
@@ -266,6 +270,14 @@ def main():
     tract_names_file = os.path.join(script_dir, "tract_name.txt")
     tract_names = pd.read_csv(tract_names_file, header=None)[0].tolist()
 
+    # Prompt the user for each folder name (with defaults provided).
+    print("Please provide the following folder names: ")
+    t1_folder = prompt_for_folder("006_T1w_MPR", "T1 scan")
+    t2_folder = prompt_for_folder("008_T2w_SPC", "T2 scan")
+    t2_df_folder = prompt_for_folder("009_t2_space_dark-fluid_sag_p2_iso_0_8", "T2 FLAIR")
+    dwi_ap_folder = prompt_for_folder("016_dMRI_dir98_AP", "dMRI AP scan")
+    dwi_pa_folder = prompt_for_folder("019_dMRI_dir98_PA", "dMRI PA scan")
+
     for subj_dir in subject_dirs:
         # Retrieve standard paths
         paths = get_subject_paths(subj_dir)
@@ -280,35 +292,30 @@ def main():
         os.makedirs(paths["five_dwi"], exist_ok=True)
         os.makedirs(paths["mat_dir"], exist_ok=True)
 
-        # Prompt the user for each folder name (with defaults provided).
-        t1_folder = prompt_for_folder("006_T1w_MPR", "T1 scan")
-        t2_folder = prompt_for_folder("008_T2w_SPC", "T2 scan")
-        t2_df_folder = prompt_for_folder("009_t2_space_dark-fluid_sag_p2_iso_0_8", "T2 FLAIR")
-        dwi_ap_folder = prompt_for_folder("016_dMRI_dir98_AP", "dMRI AP scan")
-        dwi_pa_folder = prompt_for_folder("019_dMRI_dir98_PA", "dMRI PA scan")
+        print(f"\n========= Executing script for Subject: {os.path.basename(subj_dir)} =========\n")
 
-        # Call function to convert scans
         print(f"\n========= Converting Scans for Subject: {os.path.basename(subj_dir)} =========\n")
         convert_scans(paths, args.nthreads, t1_folder, t2_folder, t2_df_folder, dwi_ap_folder, dwi_pa_folder)
 
-        # Call function to preprocess dMRI data
         print(f"\n========= Preprocessing dMRI Data for Subject: {os.path.basename(subj_dir)} =========\n")
         preprocess_dwi(paths, args.nthreads)
 
-        # Call function for fiber orientation distribution
         print(f"\n========= Calculating FOD for Subject: {os.path.basename(subj_dir)} =========\n")
-        fiber_orientation_distribution(paths, args.nthreads)
+        RF_FOD_normalization_peaks(paths, args.nthreads)
 
-        # Call for tractography postproc
         print(f"\n========= Running tractography for Subject: {os.path.basename(subj_dir)} =========\n")
-        tractseg_and_tensor(paths, subj_dir, args.nthreads)
+        tractseg(paths, subj_dir)
+
+        print(f"\n========= Generating Tensor and Scalar Metrics for Subject: {os.path.basename(subj_dir)} =========\n")
+        tensor_and_scalar_metrics(paths, args.nthreads)
 
         # Registration of T1 to dMRI using FSL
         print(f"\n========= Registering T1 to dMRI Space for Subject: {os.path.basename(subj_dir)} =========\n")
         register_t1_to_dwi(paths, args.nthreads)
 
-        print(f"\n========= Track generation and resampling Subject: {os.path.basename(subj_dir)} =========\n")
-        process_subject(subj_dir, tract_names)
+        print(f"\n========= Track generation, resampling and metrics generation for Subject: {os.path.basename(subj_dir)} =========\n")
+        tractography_resample_and_extract_metrics(subj_dir, tract_names)
+
         print(f"\n========= Subject: {os.path.basename(subj_dir)} COMPLETE =========\n")
 
 

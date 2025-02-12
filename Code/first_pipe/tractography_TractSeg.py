@@ -9,7 +9,7 @@ to be skipped
 """
 
 
-def process_subject(subject_path, tract_names, nthreads=max(4, os.cpu_count() - 10)):
+def tractography_resample_and_extract_metrics(subject_path, tract_names, nthreads=max(4, os.cpu_count() - 10)):
     """
     Process a single subject by looping through each tract.
     This is the only function imported from this module into main_first_pipe
@@ -99,7 +99,7 @@ def process_all_subjects(root, tract_names_file, nthreads=max(4, os.cpu_count() 
     for subject_path in subject_paths:
         if os.path.isdir(subject_path):
             print(f"\n===== Applying segmentation: {subject_path} =====")
-            process_subject(subject_path, tract_names, nthreads)
+            tractography_resample_and_extract_metrics(subject_path, tract_names, nthreads)
 
 
 def main():
