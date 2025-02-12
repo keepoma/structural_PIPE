@@ -85,6 +85,17 @@ def tractography_resample_and_extract_metrics(subject_path, tract_names, nthread
             "-fo"
         ])
 
+        # 5. Peak length along tracts
+        #run_cmd([
+         #   "Tractometry", "-i",
+          #  tracking_dir, "-o",
+           # Tractometry_subject1.csv - e
+            #endings_segmentations / -s
+            #peaks.nii.gz - -TOM
+            #TOM - -peak_length
+        #])
+
+
 
 def process_all_subjects(root, tract_names_file, nthreads=max(4, os.cpu_count() - 10)):
     """

@@ -1,6 +1,6 @@
 import os
 from contextlib import contextmanager
-from first_pipe.helpers import run_cmd, get_subject_paths, get_args
+from first_pipe.helpers import run_cmd, get_subject_paths, get_subject_dirs, get_args
 
 @contextmanager
 def change_dir(new_dir):
@@ -15,16 +15,6 @@ def change_dir(new_dir):
     finally:
         os.chdir(old_dir)
 
-def get_subject_dirs(root, exclude="group_analysis"):
-    """
-    Return a sorted list of subject directories excluding a specific folder
-    """
-
-    return sorted([
-        os.path.join(root, d)
-        for d in os.listdir(root)
-        if os.path.isdir(os.path.join(root, d)) and d != exclude
-    ])
 
 def compute_group_response_functions(root, output_dir, nthreads):
     os.makedirs(output_dir, exist_ok=True)
@@ -40,24 +30,20 @@ def compute_group_response_functions(root, output_dir, nthreads):
         paths = get_subject_paths(subj_dir)
         for tissue in tissue_types:
             tissue_file = os.path.join(paths["five_dwi"], f"{tissue}.txt")
-            if os.path.isfile(tissue_file):
-                response_files[tissue].append(tissue_file)
-            else:
-                print(f"Warning: {tissue_file} not found in subject {subj_dir}")
+            response_files[tissue].append(tissue_file)
 
     # Run the responsemean command for each tissue type.
     for tissue in tissue_types:
         group_file = os.path.join(output_dir, f"group_average_response_{tissue}.txt")
-        if response_files[tissue]:
-            run_cmd([
-                "responsemean",
-                *response_files[tissue],
-                group_file,
-                "-nthreads", str(nthreads),
-                "-force"
-            ])
-        else:
-            print(f"No {tissue.upper()} response files found.")
+
+        run_cmd([
+            "responsemean",
+            *response_files[tissue],
+            group_file,
+            "-nthreads", str(nthreads),
+            "-force"
+        ])
+
 
 def build_and_register_fod_template(root, nthreads, voxel_size="1.75"):
     group_analysis_dir = os.path.join(root, "group_analysis")

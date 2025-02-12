@@ -27,6 +27,19 @@ def get_subject_paths(subject_dir):
     return paths
 
 
+def get_subject_dirs(root, exclude):
+    """
+    Return a sorted list of subject directories excluding a specific folder
+    """
+
+    subject_dirs = sorted([
+        os.path.join(root, d)
+        for d in os.listdir(root)
+        if os.path.isdir(os.path.join(root, d)) and d != exclude
+    ])
+    return subject_dirs
+
+
 def get_args():
     """
     Sets up and returns the parsed command-line arguments

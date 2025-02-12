@@ -3,9 +3,7 @@ import itertools
 
 
 """
-Just looping through Inferior Frontal Gyrus and Superior Temporal Gyrus for now:
-uses "44", "45", "47l", "STGa", "TA2", "STSdp", "STSda", "STSvp", "STSva"
-generates 18 connections
+description
 """
 
 name_parcelindices = {

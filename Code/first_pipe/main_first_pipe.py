@@ -1,8 +1,9 @@
 import os
 import pandas as pd
-from helpers import run_cmd, get_subject_paths, get_args, prompt_for_folder
+from helpers import run_cmd, get_subject_paths, get_subject_dirs, get_args, prompt_for_folder
 from tractography_TractSeg import tractography_resample_and_extract_metrics
 from registration import register_t1_to_dwi
+from statistical_analysis import compute_group_response_functions
 
 """
 Main pipeline code. Imports functions from other modules for reusability.
@@ -146,7 +147,7 @@ def preprocess_dwi(paths, nthreads):
     ])
 
 
-def RF_FOD_normalization_peaks(paths, nthreads):
+def response_function(paths, nthreads):
     """
     Performs response estimation, FOD estimation, and intensity normalization in one function.
     """
@@ -162,6 +163,13 @@ def RF_FOD_normalization_peaks(paths, nthreads):
         "-force"
     ])
 
+
+def FOD_normalization(paths, nthreads):
+
+    # Helper lambda for constructing file paths
+    five_path = lambda subpath: os.path.join(paths["five_dwi"], subpath)
+
+    # FOD based on individual RF
     run_cmd([
         "dwi2fod", "-nthreads", str(nthreads),
         "msmt_csd",
@@ -173,7 +181,19 @@ def RF_FOD_normalization_peaks(paths, nthreads):
         "-force"
     ])
 
-    # Performs global intensity normalization
+    # FOD based on group RF
+    run_cmd([
+        "dwi2fod", "-nthreads", str(nthreads),
+        "msmt_csd",
+        "-mask", five_path("mask.mif"),
+        five_path("dwi_den_unr_pre_unbia.mif"),
+        root("group_average_response_wm.txt"), five_path("wm_group_average_based.mif"),
+        root("group_average_response_gm.txt"), five_path("gm_group_average_based.mif"),
+        root("group_average_response_csf.txt"), five_path("csf_group_average_based.mif"),
+        "-force"
+    ])
+
+    # Performs global intensity normalization based on individual RF
     run_cmd([
         "mtnormalise", "-nthreads", str(nthreads),
         five_path("wm.mif"), five_path("wm_norm.mif"),
@@ -183,12 +203,31 @@ def RF_FOD_normalization_peaks(paths, nthreads):
         "-force"
     ])
 
+    # Performs global intensity normalization based on group RF
+    run_cmd([
+        "mtnormalise", "-nthreads", str(nthreads),
+        five_path("wm_group_average_based.mif"), five_path("wm_group_average_based_norm.mif"),
+        five_path("gm_group_average_based.mif.mif"), five_path("gm_group_average_based_norm.mif"),
+        five_path("csf_group_average_based.mif.mif"), five_path("csf_group_average_based_norm.mif"),
+        "-mask", five_path("mask.mif"),
+        "-force"
+    ])
+
     # Generate peaks
-    peaks_path = os.path.join(paths["two_nifti"], "fod_peaks.nii.gz")
+    peaks_path_individual_RF = os.path.join(paths["two_nifti"], "fod_peaks_individual_RF.nii.gz")
+    peaks_path_group_RF = os.path.join(paths["two_nifti"], "fod_peaks_group_RF.nii.gz")
+
     run_cmd([
         "sh2peaks",
         five_path("wm_norm.mif"),
-        peaks_path,
+        peaks_path_individual_RF,
+        "-force"
+    ])
+
+    run_cmd([
+        "sh2peaks",
+        five_path("wm_group_average_based_norm.mif"),
+        peaks_path_group_RF,
         "-force"
     ])
 
@@ -258,12 +297,11 @@ def main():
     # Runs the helper module for cmd arguments
     args = get_args()
 
-    # Creates an alphabetically sorted list of absolute paths to directories under given root. Ignores non-directories
+    # Creates an alphabetically sorted list of absolute paths to directories under given root.
+    # Ignores non-directories and group level analysis folder
+    global root
     root = os.path.abspath(args.root)
-    subject_dirs = sorted([
-        os.path.join(root, d) for d in os.listdir(root)
-        if os.path.isdir(os.path.join(root, d))
-    ])
+    subject_dirs = get_subject_dirs(root, "group_level_analysis")
 
     # Build the full path to the tract_name.txt file
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -282,11 +320,6 @@ def main():
         # Retrieve standard paths
         paths = get_subject_paths(subj_dir)
 
-        # Confirm presence of 1_raw directory
-        if not os.path.isdir(paths["one_raw"]):
-            print(f"Warning: {paths['one_raw']} does not exist! Exiting.")
-            raise SystemExit(1)
-
         # Creating necessary directories
         os.makedirs(paths["two_nifti"], exist_ok=True)
         os.makedirs(paths["five_dwi"], exist_ok=True)
@@ -300,8 +333,18 @@ def main():
         print(f"\n========= Preprocessing dMRI Data for Subject: {os.path.basename(subj_dir)} =========\n")
         preprocess_dwi(paths, args.nthreads)
 
-        print(f"\n========= Calculating FOD for Subject: {os.path.basename(subj_dir)} =========\n")
-        RF_FOD_normalization_peaks(paths, args.nthreads)
+        print(f"\n========= Calculating Response Function for Subject: {os.path.basename(subj_dir)} =========\n")
+        response_function(paths, args.nthreads)
+
+    group_output_directory = os.path.join(root, "group_analysis")
+    compute_group_response_functions(root, group_output_directory, args.nthreads)
+
+    for subj_dir in subject_dirs:
+        # Retrieve standard paths
+        paths = get_subject_paths(subj_dir)
+
+        print(f"\n========= Performing FOD and normalization for Subject: {os.path.basename(subj_dir)} =========\n")
+        FOD_normalization(paths, args.nthreads)
 
         print(f"\n========= Running tractography for Subject: {os.path.basename(subj_dir)} =========\n")
         tractseg(paths, subj_dir)
@@ -317,6 +360,8 @@ def main():
         tractography_resample_and_extract_metrics(subj_dir, tract_names)
 
         print(f"\n========= Subject: {os.path.basename(subj_dir)} COMPLETE =========\n")
+
+
 
 
 if __name__ == "__main__":
