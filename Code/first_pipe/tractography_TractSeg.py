@@ -1,7 +1,7 @@
 import glob
 import os
 import pandas as pd
-from helpers import run_cmd, get_args
+from helpers import run_cmd, get_args, get_subject_paths
 
 """
 This code is also able to run as a standalone if the preprocessing part is
@@ -9,7 +9,7 @@ to be skipped
 """
 
 
-def tractography_resample_and_extract_metrics(subject_path, tract_names, nthreads=max(4, os.cpu_count() - 10)):
+def tractography_resample_and_extract_metrics(subj_dir, tract_names, nthreads=max(4, os.cpu_count() - 10)):
     """
     Process a single subject by looping through each tract.
     This is the only function imported from this module into main_first_pipe
@@ -18,21 +18,21 @@ def tractography_resample_and_extract_metrics(subject_path, tract_names, nthread
     for tract_name in tract_names:
 
         # Build file paths for segmentation files and outputs
-        bundle_path = os.path.join(subject_path, "tractseg_output", "bundle_segmentations",
+        bundle_path = os.path.join(subj_dir, "tractseg_output", "bundle_segmentations",
                                    f"{tract_name}.nii.gz")
-        bundle_b_path = os.path.join(subject_path, "tractseg_output", "endings_segmentations",
+        bundle_b_path = os.path.join(subj_dir, "tractseg_output", "endings_segmentations",
                                      f"{tract_name}_b.nii.gz")
-        bundle_e_path = os.path.join(subject_path, "tractseg_output", "endings_segmentations",
+        bundle_e_path = os.path.join(subj_dir, "tractseg_output", "endings_segmentations",
                                      f"{tract_name}_e.nii.gz")
 
         # Output tracking paths
-        tracking_dir = os.path.join(subject_path, "tractseg_output", "FOD_iFOD2_trackings")
+        tracking_dir = os.path.join(subj_dir, "tractseg_output", "FOD_iFOD2_trackings")
         os.makedirs(tracking_dir, exist_ok=True)
         tck_path = os.path.join(tracking_dir, f"{tract_name}.tck")
         tck_N100 = os.path.join(tracking_dir, f"{tract_name}_N100.tck")
 
         # Along-tract output directory
-        along_dir = os.path.join(subject_path, "along_tract")
+        along_dir = os.path.join(subj_dir, "along_tract")
         os.makedirs(along_dir, exist_ok=True)
         adc_csv = os.path.join(along_dir, f"{tract_name}_adc.csv")
         fa_csv = os.path.join(along_dir, f"{tract_name}_fa.csv")
@@ -42,7 +42,7 @@ def tractography_resample_and_extract_metrics(subject_path, tract_names, nthread
         run_cmd([
             "tckgen",
             "-algorithm", "iFOD2",
-            os.path.join(subject_path, "raw", "5_dwi", "wm_norm.mif"),
+            os.path.join(subj_dir, "raw", "5_dwi", "wm_norm.mif"),
             tck_path,
             "-seed_image", bundle_path,
             "-mask", bundle_path,
@@ -71,7 +71,7 @@ def tractography_resample_and_extract_metrics(subject_path, tract_names, nthread
         run_cmd([
             "tcksample",
             tck_N100,
-            os.path.join(subject_path, "raw", "5_dwi", "adc.mif"),
+            os.path.join(subj_dir, "raw", "5_dwi", "adc.mif"),
             adc_csv,
             "-fo"
         ])
@@ -80,20 +80,29 @@ def tractography_resample_and_extract_metrics(subject_path, tract_names, nthread
         run_cmd([
             "tcksample",
             tck_N100,
-            os.path.join(subject_path, "raw", "5_dwi", "fa.mif"),
+            os.path.join(subj_dir, "raw", "5_dwi", "fa.mif"),
             fa_csv,
             "-fo"
         ])
 
-        # 5. Peak length along tracts
-        #run_cmd([
-         #   "Tractometry", "-i",
-          #  tracking_dir, "-o",
-           # Tractometry_subject1.csv - e
-            #endings_segmentations / -s
-            #peaks.nii.gz - -TOM
-            #TOM - -peak_length
-        #])
+        # 5. Extract tractometry metrics across all tracts for the subject
+        subject_id = os.path.basename(subj_dir)
+        tractometry_csv = os.path.join(along_dir, f"Tractometry_{subject_id}.csv")
+        paths = get_subject_paths(subj_dir)
+        peaks_path_group_RF = os.path.join(paths["two_nifti"], "fod_peaks_group_RF.nii.gz")
+        # Output CSV name (e.g., "Tractometry_subject1.csv")
+
+        # This code really needs to be checked for errors
+        run_cmd([
+            "Tractometry",
+            "-i", tracking_dir,
+            "-o", tractometry_csv,
+            "-e", os.path.join(subj_dir, "tractseg_output", "endings_segmentations"),
+            "-s", peaks_path_group_RF,
+            "--TOM", "TOM",
+            "--peak_length"
+        ])
+
 
 
 
