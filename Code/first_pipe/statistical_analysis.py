@@ -292,7 +292,7 @@ def run_group_tractography(template_dir):
             "tracks_2_million_sift.tck",
             "-term_number", "2000000"
         ])
-        
+
         # Compute connectivity and perform fixel filtering.
         run_cmd(["fixelconnectivity", "fixel_mask/", "tracks_2_million_sift.tck", "matrix/"])
         run_cmd(["fixelfilter", "fd", "smooth", "fd_smooth", "-matrix", "matrix/"])
