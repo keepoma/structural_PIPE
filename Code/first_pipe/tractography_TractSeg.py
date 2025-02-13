@@ -93,6 +93,7 @@ def tractography_resample_and_extract_metrics(subj_dir, tract_names, nthreads=ma
         # Output CSV name (e.g., "Tractometry_subject1.csv")
 
         # This code really needs to be checked for errors
+        # Mapping peaks along tract
         run_cmd([
             "Tractometry",
             "-i", tracking_dir,
