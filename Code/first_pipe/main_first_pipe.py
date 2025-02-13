@@ -2,7 +2,7 @@ import os
 import pandas as pd
 from helpers import run_cmd, get_subject_paths, get_subject_dirs, get_args, prompt_for_folder
 from tractography_TractSeg import tractography_resample_and_extract_metrics
-from registration import register_t1_to_dwi
+from registration import register_t1_and_5tt_to_dwi
 from statistical_analysis import compute_group_response_functions
 
 """
@@ -127,7 +127,7 @@ def preprocess_dwi(paths, nthreads):
 
     # Strides correction
     run_cmd([
-        "mrconvert", "-strides 1,2,3,4",
+        "mrconvert", "-strides", "1,2,3,4",
         five_path("dwi_den_unr_pre_unbia.mif"),
         five_path("dwi_den_unr_pre_unbia_newor.mif"),
         "-force"
@@ -182,14 +182,18 @@ def FOD_normalization(paths, nthreads):
     ])
 
     # FOD based on group RF
+    group_output_directory = os.path.join(root, "group_analysis")
+    wm_response_file = os.path.join(group_output_directory, "group_average_response_wm.txt")
+    gm_response_file = os.path.join(group_output_directory, "group_average_response_gm.txt")
+    csf_response_file = os.path.join(group_output_directory, "group_average_response_csf.txt")
     run_cmd([
         "dwi2fod", "-nthreads", str(nthreads),
         "msmt_csd",
         "-mask", five_path("mask.mif"),
         five_path("dwi_den_unr_pre_unbia.mif"),
-        root("group_average_response_wm.txt"), five_path("wm_group_average_based.mif"),
-        root("group_average_response_gm.txt"), five_path("gm_group_average_based.mif"),
-        root("group_average_response_csf.txt"), five_path("csf_group_average_based.mif"),
+        wm_response_file, five_path("wm_group_average_based.mif"),
+        gm_response_file, five_path("gm_group_average_based.mif"),
+        csf_response_file, five_path("csf_group_average_based.mif"),
         "-force"
     ])
 
@@ -207,8 +211,8 @@ def FOD_normalization(paths, nthreads):
     run_cmd([
         "mtnormalise", "-nthreads", str(nthreads),
         five_path("wm_group_average_based.mif"), five_path("wm_group_average_based_norm.mif"),
-        five_path("gm_group_average_based.mif.mif"), five_path("gm_group_average_based_norm.mif"),
-        five_path("csf_group_average_based.mif.mif"), five_path("csf_group_average_based_norm.mif"),
+        five_path("gm_group_average_based.mif"), five_path("gm_group_average_based_norm.mif"),
+        five_path("csf_group_average_based.mif"), five_path("csf_group_average_based_norm.mif"),
         "-mask", five_path("mask.mif"),
         "-force"
     ])
@@ -238,7 +242,7 @@ def tractseg(paths, subject_dir):
     """
 
     # Helper lambda for paths in the 5_dwi folder
-    peaks_path = os.path.join(paths["two_nifti"], "fod_peaks.nii.gz")
+    peaks_path = os.path.join(paths["two_nifti"], "fod_peaks_individual_RF.nii.gz")
 
     # Tract segmentation
     output_dir = os.path.join(subject_dir, "tractseg_output")
@@ -301,7 +305,7 @@ def main():
     # Ignores non-directories and group level analysis folder
     global root
     root = os.path.abspath(args.root)
-    subject_dirs = get_subject_dirs(root, "group_level_analysis")
+    subject_dirs = get_subject_dirs(root, "group_analysis")
 
     # Build the full path to the tract_name.txt file
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -337,10 +341,10 @@ def main():
         response_function(paths, args.nthreads)
 
     group_output_directory = os.path.join(root, "group_analysis")
+    print(f"\n========= Calculating Group Response Function =========\n")
     compute_group_response_functions(root, group_output_directory, args.nthreads)
 
     for subj_dir in subject_dirs:
-        # Retrieve standard paths
         paths = get_subject_paths(subj_dir)
 
         print(f"\n========= Performing FOD and normalization for Subject: {os.path.basename(subj_dir)} =========\n")
@@ -352,9 +356,8 @@ def main():
         print(f"\n========= Generating Tensor and Scalar Metrics for Subject: {os.path.basename(subj_dir)} =========\n")
         tensor_and_scalar_metrics(paths, args.nthreads)
 
-        # Registration of T1 to dMRI using FSL
         print(f"\n========= Registering T1 to dMRI Space for Subject: {os.path.basename(subj_dir)} =========\n")
-        register_t1_to_dwi(paths, args.nthreads)
+        register_t1_and_5tt_to_dwi(paths, args.nthreads)
 
         print(f"\n========= Track generation, resampling and metrics generation for Subject: {os.path.basename(subj_dir)} =========\n")
         tractography_resample_and_extract_metrics(subj_dir, tract_names)

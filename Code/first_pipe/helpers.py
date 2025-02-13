@@ -22,12 +22,13 @@ def get_subject_paths(subject_dir):
         "one_raw": os.path.join(subject_dir, "raw", "1_raw"),
         "two_nifti": os.path.join(subject_dir, "raw", "2_nifti"),
         "five_dwi": os.path.join(subject_dir, "raw", "5_dwi"),
-        "mat_dir": os.path.join(subject_dir, "mat")
+        "mat_dir": os.path.join(subject_dir, "mat"),
+        "tck_dir": os.path.join(subject_dir, "tck")
     }
     return paths
 
 
-def get_subject_dirs(root, exclude):
+def get_subject_dirs(root, exclude="group_analysis"):
     """
     Return a sorted list of subject directories excluding a specific folder
     """

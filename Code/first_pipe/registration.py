@@ -2,7 +2,7 @@ import os
 from helpers import run_cmd, get_args
 
 
-def register_t1_to_dwi(paths, nthreads):
+def register_t1_and_5tt_to_dwi(paths, nthreads):
     """
     Generates structural to diffusion transformation matrix
     Registers T1 to diffusion space
@@ -24,7 +24,7 @@ def register_t1_to_dwi(paths, nthreads):
     ])
 
     run_cmd([
-        "mrconvert", "-strides 1,2,3,4",
+        "mrconvert", "-strides", "1,2,3,4",
         mean_b0, mean_b0_newor, "-force"
     ])
 
@@ -58,23 +58,30 @@ def register_t1_to_dwi(paths, nthreads):
 
     struct2diff_mrtrix = os.path.join(paths["mat_dir"], "struct2diff_mrtrix.txt")
     run_cmd([
-        "transformconvert",
-        struct2diff_fsl,
-        t1_nii,
-        mean_b0_newor,
-        "flirt_import",
-        struct2diff_mrtrix,
+        "transformconvert", struct2diff_fsl,
+        t1_nii, mean_b0_newor,
+        "flirt_import", struct2diff_mrtrix,
         "-nthreads", str(nthreads),
         "-force"
     ])
 
-    # Apply the inverse transform to raw T1
+    # Apply the transform to raw T1
     t1_coreg = os.path.join(paths["mat_dir"], "t1_coreg.mif")
     run_cmd([
         "mrtransform",
         t1_mif,
         "-linear", struct2diff_mrtrix,
         "-inverse", t1_coreg,
+        "-nthreads", str(nthreads),
+        "-force"
+    ])
+
+    # Apply the transform to 5tt
+    fivett_coreg = os.path.join(paths["mat_dir"], "5tt_coreg.mif")
+    run_cmd([
+        "mrtransform", fivett_nocoreg_mif,
+        "-linear", struct2diff_mrtrix,
+        "-inverse", fivett_coreg,
         "-nthreads", str(nthreads),
         "-force"
     ])
@@ -96,4 +103,4 @@ if __name__ == "__main__":
 
     for subj_dir in subject_dirs:
         paths = get_subject_paths(subj_dir)
-        register_t1_to_dwi(paths, args.nthreads)
+        register_t1_and_5tt_to_dwi(paths, args.nthreads)
