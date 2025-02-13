@@ -17,12 +17,15 @@ def change_dir(new_dir):
 
 
 def compute_group_response_functions(root, output_dir, nthreads):
+    """
+    Compute group-average response functions for each tissue type.
+    """
+
     os.makedirs(output_dir, exist_ok=True)
     subject_dirs = get_subject_dirs(root)
 
     # List of tissue types to process.
     tissue_types = ["wm", "gm", "csf"]
-    # Dictionary to hold file paths for each tissue type.
     response_files = {tissue: [] for tissue in tissue_types}
 
     # Gather response function files for each subject.
@@ -47,8 +50,8 @@ def compute_group_response_functions(root, output_dir, nthreads):
 
 def population_template_and_register(root, nthreads):
     """
-    Builds a group-level FOD template from individual subjects’ data,
-    then registers each subject’s FOD image to that template
+    Build a group-level FOD template from individual subjects’ data,
+    then register each subject’s FOD image to that template.
     """
 
     group_analysis_dir = os.path.join(root, "group_analysis")
@@ -59,6 +62,8 @@ def population_template_and_register(root, nthreads):
     os.makedirs(mask_input_dir, exist_ok=True)
 
     subject_dirs = get_subject_dirs(root)
+
+    # Copy required FOD and mask files to the template input directories.
     for subj_dir in subject_dirs:
         subject_id = os.path.basename(subj_dir)
         paths = get_subject_paths(subj_dir)
@@ -69,9 +74,10 @@ def population_template_and_register(root, nthreads):
         for key, (src_filename, dest_dir) in files_to_copy.items():
             src_path = os.path.join(paths["five_dwi"], src_filename)
             dest_path = os.path.join(dest_dir, f"{subject_id}.mif")
+            print(f"  Copying {key} file for subject {subject_id}...")
             run_cmd(["cp", src_path, dest_path])
 
-    # Build the population template using the copied images.
+    # Build the population FOD template.
     output_template = os.path.join(template_dir, "wmfod_template.mif")
     run_cmd([
         "population_template",
@@ -82,17 +88,16 @@ def population_template_and_register(root, nthreads):
         "-force"
     ])
 
-    # Register each subject to the template.
+    # Register each subject’s FOD image to the template.
     for subj_dir in subject_dirs:
         paths = get_subject_paths(subj_dir)
-        fod_dir = paths["five_dwi"]
-        with change_dir(fod_dir):
-
+        five_dir = paths["five_dwi"]
+        with change_dir(five_dir):
             run_cmd([
                 "mrregister",
-                "wmfod_norm.mif",
-                "-mask1", "dwi_mask_upsampled.mif",
-                os.path.relpath(output_template, fod_dir),
+                "wm_group_average_based_norm.mif",
+                "-mask1", "mask.mif",
+                os.path.relpath(output_template, five_dir),
                 "-nl_warp", "subject2template_warp.mif", "template2subject_warp.mif",
                 "-nthreads", str(nthreads),
                 "-force"
@@ -101,21 +106,21 @@ def population_template_and_register(root, nthreads):
 
 def warp_masks_and_create_template_mask(root, nthreads):
     """
-    For each subject, warp the subject’s mask into template space and
-    then compute the intersection (min across warped masks) to form the template mask
+    Warp each subject’s mask into template space and compute the intersection
+    to form the template mask.
     """
 
     subject_dirs = get_subject_dirs(root)
     warped_mask_paths = []
 
     for subj_dir in subject_dirs:
+        subject_id = os.path.basename(subj_dir)
         paths = get_subject_paths(subj_dir)
         fod_dir = paths["five_dwi"]
         with change_dir(fod_dir):
             input_mask = "mask.mif"
             warp_file = "subject2template_warp.mif"
             output_warped_mask = "mask_in_template_space.mif"
-
             run_cmd([
                 "mrtransform", input_mask,
                 "-warp", warp_file,
@@ -147,7 +152,6 @@ def create_group_fixel_mask(template_dir, nthreads):
     template_mask = os.path.join(template_dir, "template_mask.mif")
     wm_template = os.path.join(template_dir, "wmfod_template.mif")
     fixel_mask_dir = os.path.join(template_dir, "fixel_mask")
-
     run_cmd([
         "fod2fixel",
         "-mask", template_mask,
@@ -159,12 +163,12 @@ def create_group_fixel_mask(template_dir, nthreads):
 
 def process_all_subjects_fixels(root):
     """
-    For a given subject:
-      - Warp the subject's FOD into template space (without reorientation).
-      - Compute fixels from the warped FOD.
-      - Reorient the fixels.
-      - Establish fixel correspondence.
-      - Compute a fixel metric.
+    Process fixels for each subject:
+      - Warp the subject’s FOD into template space
+      - Compute fixels from the warped FOD
+      - Reorient the fixels
+      - Establish fixel correspondence
+      - Compute a fixel metric
     """
 
     subject_dirs = get_subject_dirs(root)
@@ -176,9 +180,8 @@ def process_all_subjects_fixels(root):
         fc_dir_rel = os.path.join("..", "group_analysis", "template", "fc")
 
         with change_dir(paths["five_dwi"]):
-            print(f"[{subject_id}] Processing fixels")
 
-            # Warp the FOD into template space
+            # Warp the FOD into template space.
             run_cmd([
                 "mrtransform",
                 "wm_group_average_based_norm.mif",
@@ -187,7 +190,7 @@ def process_all_subjects_fixels(root):
                 "fod_in_template_space_not_reoriented.mif"
             ])
 
-            # Compute fixels from the non-reoriented FOD
+            # Compute fixels from the non-reoriented FOD.
             run_cmd([
                 "fod2fixel",
                 "-mask", template_mask_rel,
@@ -196,7 +199,7 @@ def process_all_subjects_fixels(root):
                 "-afd", "fd.mif"
             ])
 
-            # Reorient the fixels
+            # Reorient the fixels.
             run_cmd([
                 "fixelreorient",
                 "fixel_in_template_space_not_reoriented",
@@ -204,7 +207,7 @@ def process_all_subjects_fixels(root):
                 "fixel_in_template_space"
             ])
 
-            # Establish fixel correspondence
+            # Establish fixel correspondence.
             run_cmd([
                 "fixelcorrespondence",
                 os.path.join("fixel_in_template_space", "fd.mif"),
@@ -213,7 +216,7 @@ def process_all_subjects_fixels(root):
                 f"{subject_id}.mif"
             ])
 
-            # Compute a fixel metric using warp2metric
+            # Compute a fixel metric using warp2metric.
             run_cmd([
                 "warp2metric",
                 "subject2template_warp.mif",
@@ -226,14 +229,15 @@ def process_all_subjects_fixels(root):
 
 def post_process_fixel_metrics(template_dir, subject_dirs):
     """
-    FC and FDC metrics
+    Post-process fixel metrics (FC and FDC).
     """
 
+    print("Post-processing fixel metrics...")
     fc_dir = os.path.join(template_dir, "fc")
     log_fc_dir = os.path.join(template_dir, "log_fc")
     os.makedirs(log_fc_dir, exist_ok=True)
 
-    # Copy the required index and directions files.
+    # Copy required index and directions files.
     run_cmd([
         "cp",
         os.path.join(fc_dir, "index.mif"),
@@ -259,6 +263,7 @@ def post_process_fixel_metrics(template_dir, subject_dirs):
         fc_file = os.path.join(fc_dir, f"{subject_id}.mif")
         fdc_file = os.path.join(fdc_dir, f"{subject_id}.mif")
         run_cmd(["mrcalc", fd_file, fc_file, "-mult", fdc_file])
+    print("Fixel metrics post-processing complete.\n")
 
 
 def run_group_tractography(template_dir):
@@ -267,8 +272,6 @@ def run_group_tractography(template_dir):
     """
 
     with change_dir(template_dir):
-        print("Running group tractography...")
-
         # Generate the initial tractography.
         run_cmd([
             "tckgen",
@@ -302,9 +305,10 @@ def run_group_tractography(template_dir):
 
 def process_fixel_and_tractography(root, nthreads):
     """
-    Fixel and tractography processing pipeline
+    Fixel and tractography processing pipeline.
     """
 
+    print("Starting fixel and tractography processing pipeline...")
     template_dir = os.path.join(root, "group_analysis", "template")
 
     # Create group fixel mask.
@@ -321,20 +325,24 @@ def process_fixel_and_tractography(root, nthreads):
     run_group_tractography(template_dir)
 
 
-if __name__ == "__main__":
+def main():
     args = get_args()
     root = os.path.abspath(args.root)
     group_output_directory = os.path.join(root, "group_analysis")
     os.makedirs(group_output_directory, exist_ok=True)
 
-    # Compute group-average response functions.
+    # Compute group-average response functions. Step only necessary if running script as standalone
     compute_group_response_functions(root, group_output_directory, args.nthreads)
 
     # Build the FOD template and register subjects.
     population_template_and_register(root, args.nthreads)
 
-    # Warp masks and create the intersection template mask.
+    # Warp masks and create the template mask.
     warp_masks_and_create_template_mask(root, args.nthreads)
 
     # Process fixel-based metrics and run group tractography.
     process_fixel_and_tractography(root, args.nthreads)
+
+
+if __name__ == "__main__":
+    main()
