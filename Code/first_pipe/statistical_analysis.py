@@ -232,7 +232,6 @@ def post_process_fixel_metrics(template_dir, subject_dirs):
     Post-process fixel metrics (FC and FDC).
     """
 
-    print("Post-processing fixel metrics...")
     fc_dir = os.path.join(template_dir, "fc")
     log_fc_dir = os.path.join(template_dir, "log_fc")
     os.makedirs(log_fc_dir, exist_ok=True)
@@ -263,7 +262,6 @@ def post_process_fixel_metrics(template_dir, subject_dirs):
         fc_file = os.path.join(fc_dir, f"{subject_id}.mif")
         fdc_file = os.path.join(fdc_dir, f"{subject_id}.mif")
         run_cmd(["mrcalc", fd_file, fc_file, "-mult", fdc_file])
-    print("Fixel metrics post-processing complete.\n")
 
 
 def run_group_tractography(template_dir):
