@@ -263,7 +263,6 @@ def post_process_fixel_metrics(template_dir, subject_dirs):
         fdc_file = os.path.join(fdc_dir, f"{subject_id}.mif")
         run_cmd(["mrcalc", fd_file, fc_file, "-mult", fdc_file])
 
-
 def run_group_tractography(template_dir):
     """
     Run group-level tractography and subsequent post-processing.
