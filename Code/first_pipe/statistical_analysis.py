@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.stats import ttest_rel, ttest_ind
 from contextlib import contextmanager
 from helpers import run_cmd, get_subject_paths, get_subject_dirs, get_args
 
@@ -116,7 +117,6 @@ def warp_masks_and_create_template_mask(root, nthreads):
     warped_mask_paths = []
 
     for subj_dir in subject_dirs:
-        subject_id = os.path.basename(subj_dir)
         paths = get_subject_paths(subj_dir)
         fod_dir = paths["five_dwi"]
         with change_dir(fod_dir):
@@ -323,7 +323,7 @@ def process_fixel_and_tractography(root, nthreads):
     run_group_tractography(template_dir)
 
 
-def visualize_fa_profile(csv_file):
+def visualize_fa(csv_file):
     """
     Visualizes the FA profile along a tract from a CSV file.
     """
@@ -348,13 +348,72 @@ def visualize_fa_profile(csv_file):
     plt.show()
 
 
-def visualize_peaks(txt_file):
+def calculate_fa_stats(csv_file):
+    """
+    Reads a CSV file containing FA values along a tract and computes summary statistics.
+
+    Assumes that each row corresponds to one subject and each column corresponds to an
+    along-tract position.
+
+    Returns:
+        stats_dict (dict): Dictionary containing:
+            - "mean_per_position": Series with the mean FA for each along-tract position.
+            - "std_per_position": Series with the standard deviation of FA per position.
+            - "overall_mean": Overall mean FA across all positions.
+            - "overall_std": Overall standard deviation of FA values.
+            - "data": The original DataFrame.
+    """
+    # Read the CSV file into a DataFrame
+    data = pd.read_csv(csv_file, skiprows=1, header=None, delim_whitespace=True)
+    data = data.astype(float)
+
+    # Calculate mean and standard deviation for each along-tract position (i.e., each column)
+    mean_per_position = data.mean(axis=0)
+    std_per_position = data.std(axis=0)
+
+    # Calculate overall mean and standard deviation across all FA values in the DataFrame
+    overall_mean = data.values.mean()
+    overall_std = data.values.std()
+
+    stats_dict = {
+        "mean_per_position": mean_per_position,
+        "std_per_position": std_per_position,
+        "overall_mean": overall_mean,
+        "overall_std": overall_std,
+        "data": data
+    }
+
+    return stats_dict
+
+
+def perform_ttest(stats1, stats2, paired=True):
+    """
+    Performs a t-test comparing the per-subject mean FA values from two FA statistics dictionaries.
+    """
+
+    # Compute per-subject mean FA values from the original data
+    subject_means1 = stats1["data"].mean(axis=1)
+    subject_means2 = stats2["data"].mean(axis=1)
+
+    # For a paired t-test, ensure both arrays have the same length.
+    if paired and len(subject_means1) != len(subject_means2):
+        raise ValueError("For a paired t-test, both datasets must have the same number of subjects.")
+
+    if paired:
+        t_stat, p_value = ttest_rel(subject_means1, subject_means2)
+    else:
+        t_stat, p_value = ttest_ind(subject_means1, subject_means2)
+
+    return {"t_statistic": t_stat, "p_value": p_value}
+
+
+def visualize_peak_length(peaks_txt):
     """
     Generates mean peak amplitude from 2000 streamlines across 100 points
     """
 
     # Load data as 1D array
-    data_1d = np.loadtxt(txt_file)
+    data_1d = np.loadtxt(peaks_txt)
     n_points = 100
     n_streamlines = 2000
 
@@ -387,21 +446,22 @@ def main():
     group_output_directory = os.path.join(root, "group_analysis")
     os.makedirs(group_output_directory, exist_ok=True)
 
-    # Compute group-average response functions. Step only necessary if running script as standalone
-    compute_group_response_functions(root, group_output_directory, args.nthreads)
+    print(f"\n========= Calculating Group RF =========\n")
+    #compute_group_response_functions(root, group_output_directory, args.nthreads)
 
-    # Build the FOD template and register subjects.
-    population_template_and_register(root, args.nthreads)
+    print(f"\n========= Building FOD template and Registering Subjects =========\n")
+    #population_template_and_register(root, args.nthreads)
 
-    # Warp masks and create the template mask.
+    print(f"\n========= Warping and creating Template Mask =========\n")
     warp_masks_and_create_template_mask(root, args.nthreads)
 
-    # Process fixel-based metrics and run group tractography.
+    print(f"\n========= Running fixel-based metrics and Group Tractography =========\n")
     process_fixel_and_tractography(root, args.nthreads)
 
 
 if __name__ == "__main__":
-    #main()
-    visualize_fa_profile("/media/nas/nikita/test_study2_1sub/test_302/along_tract/AF_left_fa.csv")
-    #visualize_fa_profile("/media/nas/nikita/test_study2_1sub/test_302/along_tract/AF_right_fa.csv")
-    visualize_peaks("/home/nikita/Structural_PIPE/AF_peak_values.txt")
+    main()
+    #visualize_fa("/media/nas/nikita/test_study2_1sub/test_302/along_tract/CST_left_fa.csv")
+    #visualize_fa("/media/nas/nikita/test_study2_1sub/test_302/along_tract/AF_right_fa.csv")
+    #visualize_peak_length("/media/nas/nikita/test_study2_1sub/test_302/along_tract/CST_left_peaks.txt")
+    #print(calculate_fa_stats("/media/nas/nikita/test_study2_1sub/test_302/along_tract/CST_left_peaks.txt"))
