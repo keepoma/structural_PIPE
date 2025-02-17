@@ -159,7 +159,7 @@ def create_group_fixel_mask(template_dir, nthreads):
         "-mask", template_mask,
         "-fmls_peak_value", "0.06",
         wm_template,
-        fixel_mask_dir
+        fixel_mask_dir, "-force"
     ])
 
 
@@ -169,17 +169,20 @@ def process_all_subjects_fixels(root):
       - Warp the subject’s FOD into template space
       - Compute fixels from the warped FOD
       - Reorient the fixels
-      - Establish fixel correspondence
-      - Compute a fixel metric
+      - Establish fixel correspondence for both FD and FC metrics
+      - Compute a fixel metric (FC) using warp2metric.
     """
-
     subject_dirs = get_subject_dirs(root)
     for subj_dir in subject_dirs:
         subject_id = os.path.basename(subj_dir)
         paths = get_subject_paths(subj_dir)
-        template_mask_rel = os.path.join("..", "group_analysis", "template", "template_mask.mif")
-        fixel_mask_rel = os.path.join("..", "group_analysis", "template", "fixel_mask")
-        fc_dir_rel = os.path.join("..", "group_analysis", "template", "fc")
+        # Paths in template space.
+        template_mask_rel = os.path.join(root, "group_analysis", "template", "template_mask.mif")
+        fixel_mask_rel = os.path.join(root, "group_analysis", "template", "fixel_mask")
+        fc_dir_rel = os.path.join(root, "group_analysis", "template", "fc")
+        # Define a dedicated directory for FD in template space.
+        fd_dir = os.path.join(root, "group_analysis", "template", "fd")
+        os.makedirs(fd_dir, exist_ok=True)
 
         with change_dir(paths["five_dwi"]):
 
@@ -189,7 +192,8 @@ def process_all_subjects_fixels(root):
                 "wm_group_average_based_norm.mif",
                 "-warp", "subject2template_warp.mif",
                 "-reorient_fod", "no",
-                "fod_in_template_space_not_reoriented.mif"
+                "fod_in_template_space_not_reoriented.mif",
+                "-force"
             ])
 
             # Compute fixels from the non-reoriented FOD.
@@ -198,7 +202,8 @@ def process_all_subjects_fixels(root):
                 "-mask", template_mask_rel,
                 "fod_in_template_space_not_reoriented.mif",
                 "fixel_in_template_space_not_reoriented",
-                "-afd", "fd.mif"
+                "-afd", "fd.mif",
+                "-force"
             ])
 
             # Reorient the fixels.
@@ -206,26 +211,39 @@ def process_all_subjects_fixels(root):
                 "fixelreorient",
                 "fixel_in_template_space_not_reoriented",
                 "subject2template_warp.mif",
-                "fixel_in_template_space"
+                "fixel_in_template_space",
+                "-force"
             ])
 
-            # Establish fixel correspondence.
+            # Establish fixel correspondence for the FD metric.
+            run_cmd([
+                "fixelcorrespondence",
+                os.path.join("fixel_in_template_space", "fd.mif"),
+                fixel_mask_rel,
+                fd_dir,
+                f"{subject_id}.mif",
+                "-force"
+            ])
+
+            # Establish fixel correspondence for the FC metric.
             run_cmd([
                 "fixelcorrespondence",
                 os.path.join("fixel_in_template_space", "fd.mif"),
                 fixel_mask_rel,
                 fc_dir_rel,
-                f"{subject_id}.mif"
+                f"{subject_id}.mif",
+                "-force"
             ])
 
-            # Compute a fixel metric using warp2metric.
+            # Compute a fixel metric (FC) using warp2metric.
             run_cmd([
                 "warp2metric",
                 "subject2template_warp.mif",
                 "-fc",
-                template_mask_rel,
+                fixel_mask_rel,
                 fc_dir_rel,
-                "IN.mif"
+                "IN.mif",
+                "-force"
             ])
 
 
@@ -251,7 +269,7 @@ def post_process_fixel_metrics(template_dir, subject_dirs):
         subject_id = os.path.basename(subj_dir)
         fc_file = os.path.join(fc_dir, f"{subject_id}.mif")
         log_fc_file = os.path.join(log_fc_dir, f"{subject_id}.mif")
-        run_cmd(["mrcalc", fc_file, "-log", log_fc_file])
+        run_cmd(["mrcalc", fc_file, "-log", log_fc_file, "-force"])
 
     # Compute the fdc metric.
     fdc_dir = os.path.join(template_dir, "fdc")
@@ -265,7 +283,7 @@ def post_process_fixel_metrics(template_dir, subject_dirs):
         fdc_file = os.path.join(fdc_dir, f"{subject_id}.mif")
         run_cmd(["mrcalc", fd_file, fc_file, "-mult", fdc_file])
 
-def run_group_tractography(template_dir):
+def run_group_tractography(template_dir, nthreads):
     """
     Run group-level tractography and subsequent post-processing.
     """
@@ -281,18 +299,22 @@ def run_group_tractography(template_dir):
             "wmfod_template.mif",
             "-seed_image", "template_mask.mif",
             "-mask", "template_mask.mif",
-            "-select", "20000000",
+            "-select", "5000000",
             "-cutoff", "0.06",
-            "tracks_20_million.tck"
+            "tracks_20_million.tck",
+            "-nthreads", str(nthreads),
+            "-force"
         ])
 
         # Apply SIFT to reduce the tractogram.
         run_cmd([
             "tcksift",
-            "tracks_20_million.tck",
+            "tracks_5_million.tck",
             "wmfod_template.mif",
             "tracks_2_million_sift.tck",
-            "-term_number", "2000000"
+            "-term_number", "2000000",
+            "-nthreads", str(nthreads),
+            "-force"
         ])
 
         # Compute connectivity and perform fixel filtering.
@@ -300,27 +322,6 @@ def run_group_tractography(template_dir):
         run_cmd(["fixelfilter", "fd", "smooth", "fd_smooth", "-matrix", "matrix/"])
         run_cmd(["fixelfilter", "log_fc", "smooth", "log_fc_smooth", "-matrix", "matrix/"])
         run_cmd(["fixelfilter", "fdc", "smooth", "fdc_smooth", "-matrix", "matrix/"])
-
-
-def process_fixel_and_tractography(root, nthreads):
-    """
-    Fixel and tractography processing pipeline.
-    """
-
-    template_dir = os.path.join(root, "group_analysis", "template")
-
-    # Create group fixel mask.
-    create_group_fixel_mask(template_dir, nthreads)
-
-    # Process fixels for each subject.
-    process_all_subjects_fixels(root)
-
-    # Post-process fixel metrics.
-    subject_dirs = get_subject_dirs(root)
-    post_process_fixel_metrics(template_dir, subject_dirs)
-
-    # Run group-level tractography.
-    run_group_tractography(template_dir)
 
 
 def visualize_fa(csv_file):
@@ -444,6 +445,8 @@ def main():
     args = get_args()
     root = os.path.abspath(args.root)
     group_output_directory = os.path.join(root, "group_analysis")
+    template_dir = os.path.join(root, "group_analysis", "template")
+    subject_dirs = get_subject_dirs(root)
     os.makedirs(group_output_directory, exist_ok=True)
 
     print(f"\n========= Calculating Group RF =========\n")
@@ -453,10 +456,19 @@ def main():
     #population_template_and_register(root, args.nthreads)
 
     print(f"\n========= Warping and creating Template Mask =========\n")
-    warp_masks_and_create_template_mask(root, args.nthreads)
+    # warp_masks_and_create_template_mask(root, args.nthreads)
 
-    print(f"\n========= Running fixel-based metrics and Group Tractography =========\n")
-    process_fixel_and_tractography(root, args.nthreads)
+    print(f"\n========= Creating Group Fixel Mask =========\n")
+    #create_group_fixel_mask(template_dir, args.nthreads)
+
+    print(f"\n========= Processing fixels for each subject =========\n")
+    #process_all_subjects_fixels(root)
+
+    print(f"\n========= Post Processing fixel Metrics =========\n")
+    #post_process_fixel_metrics(template_dir, subject_dirs)
+
+    print(f"\n========= Running group tractography =========\n")
+    run_group_tractography(template_dir, args.nthreads)
 
 
 if __name__ == "__main__":
