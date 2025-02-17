@@ -73,7 +73,7 @@ def tractography_resample_and_extract_metrics(subj_dir, tract_names, nthreads=ma
             tck_N100,
             os.path.join(subj_dir, "raw", "5_dwi", "adc.mif"),
             adc_csv,
-            "-fo"
+            "-force"
         ])
 
         # 4. Sample FA values along the tract
@@ -82,7 +82,7 @@ def tractography_resample_and_extract_metrics(subj_dir, tract_names, nthreads=ma
             tck_N100,
             os.path.join(subj_dir, "raw", "5_dwi", "fa.mif"),
             fa_csv,
-            "-fo"
+            "-force"
         ])
 
         # 5. Extract tractometry metrics across all tracts for the subject

@@ -1,4 +1,6 @@
 import os
+import pandas as pd
+import matplotlib.pyplot as plt
 from contextlib import contextmanager
 from helpers import run_cmd, get_subject_paths, get_subject_dirs, get_args
 
@@ -320,6 +322,36 @@ def process_fixel_and_tractography(root, nthreads):
     run_group_tractography(template_dir)
 
 
+def visualize_fa_profile(csv_file, title=None, xlabel="Along-Tract Position (resampled)",
+                         ylabel="FA Value"):
+    """
+    Visualizes the FA profile along a tract from a CSV file.
+    """
+
+    # Set title to the CSV file's base name if no title is provided
+    if title is None:
+        title = os.path.basename(csv_file)
+
+    # Read the FA CSV file into a df
+    data = pd.read_csv(csv_file, skiprows=1, header=None, delim_whitespace=True)
+
+    plt.figure(figsize=(10, 5))
+
+    mean_values = data.mean(axis=1)
+    std_values = data.std(axis=1)
+    x = range(1, len(mean_values) + 1)
+    plt.plot(x, mean_values, label="Mean FA", color="blue", linewidth=2)
+    plt.fill_between(x, mean_values - std_values, mean_values + std_values,
+                     color="blue", alpha=0.3, label="Std. Deviation")
+
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.title(title)
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+
 def main():
     args = get_args()
     root = os.path.abspath(args.root)
@@ -341,3 +373,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+    #visualize_fa_profile("/media/nas/nikita/test_study2_1sub/test_302/along_tract/AF_left_fa.csv")
+    #visualize_fa_profile("/media/nas/nikita/test_study2_1sub/test_302/along_tract/AF_right_fa.csv")
