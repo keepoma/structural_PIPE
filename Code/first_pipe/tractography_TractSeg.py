@@ -36,6 +36,8 @@ def tractography_resample_and_extract_metrics(subj_dir, tract_names, nthreads=ma
         os.makedirs(along_dir, exist_ok=True)
         adc_csv = os.path.join(along_dir, f"{tract_name}_adc.csv")
         fa_csv = os.path.join(along_dir, f"{tract_name}_fa.csv")
+        peaks_txt = os.path.join(along_dir, f"{tract_name}_peaks.txt")
+
         #c_csv = os.path.join(along_dir, f"{tract_name}_c.csv")
 
         # 1. Track generation using tckgen
@@ -85,14 +87,14 @@ def tractography_resample_and_extract_metrics(subj_dir, tract_names, nthreads=ma
             "-force"
         ])
 
-        # 5. Extract tractometry metrics across all tracts for the subject
-        subject_id = os.path.basename(subj_dir)
-        tractometry_csv = os.path.join(along_dir, f"Tractometry_{subject_id}.csv")
+        # 5. Peaks along tract
         paths = get_subject_paths(subj_dir)
         peaks_path_group_RF = os.path.join(paths["two_nifti"], "fod_peaks_group_RF.nii.gz")
-        tom_dir = os.path.join(subj_dir, "tractseg_output", "TOM")
-
-        # Mapping peaks along tract
+        run_cmd([
+            "tcksample",
+            tck_N100, peaks_path_group_RF,
+            peaks_txt
+        ])
 
 
 def process_all_subjects(root, tract_names_file, nthreads=max(4, os.cpu_count() - 10)):

@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 from contextlib import contextmanager
 from helpers import run_cmd, get_subject_paths, get_subject_dirs, get_args
 
@@ -322,33 +323,61 @@ def process_fixel_and_tractography(root, nthreads):
     run_group_tractography(template_dir)
 
 
-def visualize_fa_profile(csv_file, title=None, xlabel="Along-Tract Position (resampled)",
-                         ylabel="FA Value"):
+def visualize_fa_profile(csv_file):
     """
     Visualizes the FA profile along a tract from a CSV file.
     """
-
-    # Set title to the CSV file's base name if no title is provided
-    if title is None:
-        title = os.path.basename(csv_file)
 
     # Read the FA CSV file into a df
     data = pd.read_csv(csv_file, skiprows=1, header=None, delim_whitespace=True)
 
     plt.figure(figsize=(10, 5))
 
-    mean_values = data.mean(axis=1)
-    std_values = data.std(axis=1)
+    mean_values = data.mean(axis=0)
+    std_values = data.std(axis=0)
     x = range(1, len(mean_values) + 1)
     plt.plot(x, mean_values, label="Mean FA", color="blue", linewidth=2)
     plt.fill_between(x, mean_values - std_values, mean_values + std_values,
                      color="blue", alpha=0.3, label="Std. Deviation")
 
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.title(title)
+    plt.xlabel("Along-Tract Position (resampled)")
+    plt.ylabel("FA Value")
+    plt.title(os.path.basename(csv_file))
     plt.legend()
     plt.grid(True)
+    plt.show()
+
+
+def visualize_peaks(txt_file):
+    """
+    Generates mean peak amplitude from 2000 streamlines across 100 points
+    """
+
+    # Load data as 1D array
+    data_1d = np.loadtxt(txt_file)
+    n_points = 100
+    n_streamlines = 2000
+
+    # Reshape data to (n_streamlines, n_points)
+    data_2d = data_1d.reshape(n_streamlines, n_points)
+
+    # Mean and SD plot
+    mean_values = data_2d.mean(axis=0)
+    std_values = data_2d.std(axis=0)
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(mean_values, label="Mean")
+    plt.fill_between(
+        np.arange(n_points),
+        mean_values - std_values,
+        mean_values + std_values,
+        alpha=0.2, label="±1 SD"
+    )
+
+    plt.title("Mean ± SD of Peak Values")
+    plt.xlabel("Node index")
+    plt.ylabel("Peak amplitude")
+    plt.legend()
     plt.show()
 
 
@@ -372,6 +401,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
-    #visualize_fa_profile("/media/nas/nikita/test_study2_1sub/test_302/along_tract/AF_left_fa.csv")
+    #main()
+    visualize_fa_profile("/media/nas/nikita/test_study2_1sub/test_302/along_tract/AF_left_fa.csv")
     #visualize_fa_profile("/media/nas/nikita/test_study2_1sub/test_302/along_tract/AF_right_fa.csv")
+    visualize_peaks("/home/nikita/Structural_PIPE/AF_peak_values.txt")
