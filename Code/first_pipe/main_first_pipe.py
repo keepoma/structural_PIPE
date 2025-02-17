@@ -281,19 +281,19 @@ def tensor_and_scalar_metrics(paths, nthreads):
     run_cmd([
         "dwi2tensor", "-nthreads", str(nthreads),
         five_path("dwi_den_unr_pre_unbia.mif"),
-        five_path("tensor.mif")
+        five_path("tensor.mif"), "-force"
     ])
 
     run_cmd([
         "tensor2metric", "-nthreads", str(nthreads),
         five_path("tensor.mif"),
-        "-adc", five_path("adc.mif")
+        "-adc", five_path("adc.mif"), "-force"
     ])
 
     run_cmd([
         "tensor2metric", "-nthreads", str(nthreads),
         five_path("tensor.mif"),
-        "-fa", five_path("fa.mif")
+        "-fa", five_path("fa.mif"), "-force"
     ])
 
 
@@ -332,38 +332,37 @@ def main():
         print(f"\n========= Executing script for Subject: {os.path.basename(subj_dir)} =========\n")
 
         print(f"\n========= Converting Scans for Subject: {os.path.basename(subj_dir)} =========\n")
-        convert_scans(paths, args.nthreads, t1_folder, t2_folder, t2_df_folder, dwi_ap_folder, dwi_pa_folder)
+        #convert_scans(paths, args.nthreads, t1_folder, t2_folder, t2_df_folder, dwi_ap_folder, dwi_pa_folder)
 
         print(f"\n========= Preprocessing dMRI Data for Subject: {os.path.basename(subj_dir)} =========\n")
-        preprocess_dwi(paths, args.nthreads)
+        #preprocess_dwi(paths, args.nthreads)
 
         print(f"\n========= Calculating Response Function for Subject: {os.path.basename(subj_dir)} =========\n")
-        response_function(paths, args.nthreads)
+        #response_function(paths, args.nthreads)
 
     group_output_directory = os.path.join(root, "group_analysis")
     print(f"\n========= Calculating Group Response Function =========\n")
-    compute_group_response_functions(root, group_output_directory, args.nthreads)
+    #compute_group_response_functions(root, group_output_directory, args.nthreads)
 
     for subj_dir in subject_dirs:
         paths = get_subject_paths(subj_dir)
 
         print(f"\n========= Performing FOD and normalization for Subject: {os.path.basename(subj_dir)} =========\n")
-        FOD_normalization(paths, args.nthreads)
+        #FOD_normalization(paths, args.nthreads)
 
         print(f"\n========= Running tractography for Subject: {os.path.basename(subj_dir)} =========\n")
-        tractseg(paths, subj_dir)
+        #tractseg(paths, subj_dir)
 
         print(f"\n========= Generating Tensor and Scalar Metrics for Subject: {os.path.basename(subj_dir)} =========\n")
-        tensor_and_scalar_metrics(paths, args.nthreads)
+        #tensor_and_scalar_metrics(paths, args.nthreads)
 
         print(f"\n========= Registering T1 to dMRI Space for Subject: {os.path.basename(subj_dir)} =========\n")
-        register_t1_and_5tt_to_dwi(paths, args.nthreads)
+        #register_t1_and_5tt_to_dwi(paths, args.nthreads)
 
         print(f"\n========= Track generation, resampling and metrics generation for Subject: {os.path.basename(subj_dir)} =========\n")
         tractography_resample_and_extract_metrics(subj_dir, tract_names)
 
         print(f"\n========= Subject: {os.path.basename(subj_dir)} COMPLETE =========\n")
-
 
 
 

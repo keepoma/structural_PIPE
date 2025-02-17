@@ -90,21 +90,9 @@ def tractography_resample_and_extract_metrics(subj_dir, tract_names, nthreads=ma
         tractometry_csv = os.path.join(along_dir, f"Tractometry_{subject_id}.csv")
         paths = get_subject_paths(subj_dir)
         peaks_path_group_RF = os.path.join(paths["two_nifti"], "fod_peaks_group_RF.nii.gz")
-        # Output CSV name (e.g., "Tractometry_subject1.csv")
+        tom_dir = os.path.join(subj_dir, "tractseg_output", "TOM")
 
-        # This code really needs to be checked for errors
         # Mapping peaks along tract
-        run_cmd([
-            "Tractometry",
-            "-i", tracking_dir,
-            "-o", tractometry_csv,
-            "-e", os.path.join(subj_dir, "tractseg_output", "endings_segmentations"),
-            "-s", peaks_path_group_RF,
-            "--TOM", "TOM",
-            "--peak_length"
-        ])
-
-
 
 
 def process_all_subjects(root, tract_names_file, nthreads=max(4, os.cpu_count() - 10)):

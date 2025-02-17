@@ -74,7 +74,6 @@ def population_template_and_register(root, nthreads):
         for key, (src_filename, dest_dir) in files_to_copy.items():
             src_path = os.path.join(paths["five_dwi"], src_filename)
             dest_path = os.path.join(dest_dir, f"{subject_id}.mif")
-            print(f"  Copying {key} file for subject {subject_id}...")
             run_cmd(["cp", src_path, dest_path])
 
     # Build the population FOD template.
@@ -305,7 +304,6 @@ def process_fixel_and_tractography(root, nthreads):
     Fixel and tractography processing pipeline.
     """
 
-    print("Starting fixel and tractography processing pipeline...")
     template_dir = os.path.join(root, "group_analysis", "template")
 
     # Create group fixel mask.
