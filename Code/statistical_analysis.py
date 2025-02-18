@@ -136,6 +136,10 @@ def warp_masks_and_create_template_mask(root, nthreads):
             warped_mask_paths.append(os.path.join(os.getcwd(), output_warped_mask))
 
     template_mask = os.path.join(root, "group_analysis", "template", "template_mask.mif")
+
+    # Create group-level template mask by taking the min value
+    # at each voxel across all subjects masks in template space.
+    # It's conservative (a single 0 voxel is enough to exclude)
     run_cmd([
         "mrmath",
         *warped_mask_paths,
