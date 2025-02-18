@@ -1,7 +1,7 @@
 import glob
 import os
 import pandas as pd
-from helpers import run_cmd, get_args, get_subject_paths
+from Code.helpers import run_cmd, get_args, get_subject_paths
 
 """
 This code is also able to run as a standalone if the preprocessing part is

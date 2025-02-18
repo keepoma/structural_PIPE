@@ -5,7 +5,7 @@ import numpy as np
 from statsmodels.stats.multitest import multipletests
 from scipy import stats
 from contextlib import contextmanager
-from helpers import run_cmd, get_subject_paths, get_subject_dirs, get_args
+from Code.helpers import run_cmd, get_subject_paths, get_subject_dirs, get_args
 
 @contextmanager
 def change_dir(new_dir):
@@ -590,25 +590,25 @@ def main():
     os.makedirs(group_output_directory, exist_ok=True)
 
     print(f"\n========= Calculating Group RF =========\n")
-    #compute_group_response_functions(root, group_output_directory, args.nthreads)
+    compute_group_response_functions(root, group_output_directory, args.nthreads)
 
     print(f"\n========= Building FOD template and Registering Subjects =========\n")
-    #population_template_and_register(root, args.nthreads)
+    population_template_and_register(root, args.nthreads)
 
     print(f"\n========= Warping and creating Template Mask =========\n")
-    # warp_masks_and_create_template_mask(root, args.nthreads)
+    warp_masks_and_create_template_mask(root, args.nthreads)
 
     print(f"\n========= Creating Group Fixel Mask =========\n")
-    #create_group_fixel_mask(template_dir, args.nthreads)
+    create_group_fixel_mask(template_dir, args.nthreads)
 
     print(f"\n========= Processing fixels for each subject =========\n")
-    #process_all_subjects_fixels(root)
+    process_all_subjects_fixels(root)
 
     print(f"\n========= Post Processing fixel Metrics =========\n")
-    #post_process_fixel_metrics(template_dir, subject_dirs)
+    post_process_fixel_metrics(template_dir, subject_dirs)
 
     print(f"\n========= Running group tractography =========\n")
-    #run_group_tractography(template_dir, args.nthreads)
+    run_group_tractography(template_dir, args.nthreads)
 
     print(f"\n========= Create and Run GLM =========\n")
     create_and_run_glm(template_dir, subject_dirs)

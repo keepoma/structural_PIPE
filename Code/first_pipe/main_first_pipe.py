@@ -1,12 +1,13 @@
 import os
 import pandas as pd
-from helpers import run_cmd, get_subject_paths, get_subject_dirs, get_args, prompt_for_folder
+import Code.statistical_analysis as sa
+from Code.helpers import run_cmd, get_subject_paths, get_subject_dirs, get_args, prompt_for_folder
 from tractography_TractSeg import tractography_resample_and_extract_metrics
-from registration import register_t1_and_5tt_to_dwi
-from statistical_analysis import compute_group_response_functions
+from Code.registration import register_t1_and_5tt_to_dwi
+
 
 """
-Main pipeline code. Imports functions from other modules for reusability.
+Main pipeline code. 
 """
 
 
@@ -312,7 +313,8 @@ def main():
     tract_names_file = os.path.join(script_dir, "tract_name.txt")
     tract_names = pd.read_csv(tract_names_file, header=None)[0].tolist()
 
-    # Prompt the user for each folder name (with defaults provided).
+    # Prompt the user for each folder name (with defaults provided)
+    # Pending to save these to config file or something
     print("Please provide the following folder names: ")
     t1_folder = prompt_for_folder("006_T1w_MPR", "T1 scan")
     t2_folder = prompt_for_folder("008_T2w_SPC", "T2 scan")
@@ -332,32 +334,32 @@ def main():
         print(f"\n========= Executing script for Subject: {os.path.basename(subj_dir)} =========\n")
 
         print(f"\n========= Converting Scans for Subject: {os.path.basename(subj_dir)} =========\n")
-        #convert_scans(paths, args.nthreads, t1_folder, t2_folder, t2_df_folder, dwi_ap_folder, dwi_pa_folder)
+        convert_scans(paths, args.nthreads, t1_folder, t2_folder, t2_df_folder, dwi_ap_folder, dwi_pa_folder)
 
         print(f"\n========= Preprocessing dMRI Data for Subject: {os.path.basename(subj_dir)} =========\n")
-        #preprocess_dwi(paths, args.nthreads)
+        preprocess_dwi(paths, args.nthreads)
 
         print(f"\n========= Calculating Response Function for Subject: {os.path.basename(subj_dir)} =========\n")
-        #response_function(paths, args.nthreads)
+        response_function(paths, args.nthreads)
 
     group_output_directory = os.path.join(root, "group_analysis")
     print(f"\n========= Calculating Group Response Function =========\n")
-    #compute_group_response_functions(root, group_output_directory, args.nthreads)
+    sa.compute_group_response_functions(root, group_output_directory, args.nthreads)
 
     for subj_dir in subject_dirs:
         paths = get_subject_paths(subj_dir)
 
         print(f"\n========= Performing FOD and normalization for Subject: {os.path.basename(subj_dir)} =========\n")
-        #FOD_normalization(paths, args.nthreads)
+        FOD_normalization(paths, args.nthreads)
 
         print(f"\n========= Running tractography for Subject: {os.path.basename(subj_dir)} =========\n")
-        #tractseg(paths, subj_dir)
+        tractseg(paths, subj_dir)
 
         print(f"\n========= Generating Tensor and Scalar Metrics for Subject: {os.path.basename(subj_dir)} =========\n")
-        #tensor_and_scalar_metrics(paths, args.nthreads)
+        tensor_and_scalar_metrics(paths, args.nthreads)
 
         print(f"\n========= Registering T1 to dMRI Space for Subject: {os.path.basename(subj_dir)} =========\n")
-        #register_t1_and_5tt_to_dwi(paths, args.nthreads)
+        register_t1_and_5tt_to_dwi(paths, args.nthreads)
 
         print(f"\n========= Track generation, resampling and metrics generation for Subject: {os.path.basename(subj_dir)} =========\n")
         tractography_resample_and_extract_metrics(subj_dir, tract_names)
