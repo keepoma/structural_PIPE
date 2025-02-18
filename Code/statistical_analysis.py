@@ -119,8 +119,8 @@ def warp_masks_and_create_template_mask(root, nthreads):
 
     for subj_dir in subject_dirs:
         paths = get_subject_paths(subj_dir)
-        fod_dir = paths["five_dwi"]
-        with change_dir(fod_dir):
+        five_dir = paths["five_dwi"]
+        with change_dir(five_dir):
             input_mask = "mask.mif"
             warp_file = "subject2template_warp.mif"
             output_warped_mask = "mask_in_template_space.mif"
@@ -173,6 +173,7 @@ def process_all_subjects_fixels(root):
       - Establish fixel correspondence for both FD and FC metrics
       - Compute a fixel metric (FC) using warp2metric.
     """
+
     subject_dirs = get_subject_dirs(root)
     for subj_dir in subject_dirs:
         subject_id = os.path.basename(subj_dir)
@@ -222,16 +223,6 @@ def process_all_subjects_fixels(root):
                 os.path.join("fixel_in_template_space", "fd.mif"),
                 fixel_mask_rel,
                 fd_dir,
-                f"{subject_id}.mif",
-                "-force"
-            ])
-
-            # Establish fixel correspondence for the FC metric.
-            run_cmd([
-                "fixelcorrespondence",
-                os.path.join("fixel_in_template_space", "fd.mif"),
-                fixel_mask_rel,
-                fc_dir_rel,
                 f"{subject_id}.mif",
                 "-force"
             ])
