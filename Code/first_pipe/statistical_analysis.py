@@ -2,7 +2,8 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.stats import ttest_rel, ttest_ind
+from statsmodels.stats.multitest import multipletests
+from scipy import stats
 from contextlib import contextmanager
 from helpers import run_cmd, get_subject_paths, get_subject_dirs, get_args
 
@@ -301,7 +302,7 @@ def run_group_tractography(template_dir, nthreads):
             "-mask", "template_mask.mif",
             "-select", "5000000",
             "-cutoff", "0.06",
-            "tracks_20_million.tck",
+            "tracks_5_million.tck",
             "-nthreads", str(nthreads),
             "-force"
         ])
@@ -322,6 +323,98 @@ def run_group_tractography(template_dir, nthreads):
         run_cmd(["fixelfilter", "fd", "smooth", "fd_smooth", "-matrix", "matrix/"])
         run_cmd(["fixelfilter", "log_fc", "smooth", "log_fc_smooth", "-matrix", "matrix/"])
         run_cmd(["fixelfilter", "fdc", "smooth", "fdc_smooth", "-matrix", "matrix/"])
+
+
+def create_and_run_glm(template_dir, subject_dirs):
+    """
+    Create a simple General Lineal Model (GLM) for fixel-based analyses
+    and run fixelcfestats for FD, log FC, and FDC.
+
+    This function creates three files:
+      - design_matrix.txt: A column of ones (one per subject).
+      - contrast_matrix.txt: A single "1" (for a simple effect).
+      - files.txt: A list of file names (one per subject), assumed to be named <subject_id>.mif
+        in the smoothed metric directories.
+
+    It then runs fixelcfestats for each smoothed metric directory:
+      - fd_smooth/
+      - log_fc_smooth/
+      - fdc_smooth/
+
+    The connectivity matrix is assumed to reside in a subdirectory "matrix" of template_dir.
+    """
+
+    # Define paths for the GLM text files within the template directory.
+    design_matrix_path = os.path.join(template_dir, "design_matrix.txt")
+    contrast_matrix_path = os.path.join(template_dir, "contrast_matrix.txt")
+    files_list_path = os.path.join(template_dir, "files.txt")
+
+    num_subjects = len(subject_dirs)
+
+    # Create the design matrix (each subject gets a "1" on its own line).
+    with open(design_matrix_path, "w") as f:
+        for _ in range(num_subjects):
+            f.write("1\n")
+
+    # Create the contrast matrix (a single "1").
+    with open(contrast_matrix_path, "w") as f:
+        f.write("1\n")
+
+    # Create the subject files list.
+    # Assumes that in each metric's smooth directory, each subject's file is named <subject_id>.mif.
+    with open(files_list_path, "w") as f:
+        for subj_dir in subject_dirs:
+            subject_id = os.path.basename(subj_dir)
+            f.write(f"{subject_id}.mif\n")
+
+    # Define the connectivity matrix directory.
+    connectivity_matrix = os.path.join(template_dir, "matrix")
+
+    # Run fixelcfestats for each metric.
+    # FD
+    fd_smooth_dir = os.path.join(template_dir, "fd_smooth")
+    stats_fd_dir = os.path.join(template_dir, "stats_fd")
+    os.makedirs(stats_fd_dir, exist_ok=True)
+    run_cmd([
+        "fixelcfestats",
+        fd_smooth_dir,
+        files_list_path,
+        design_matrix_path,
+        contrast_matrix_path,
+        connectivity_matrix,
+        stats_fd_dir,
+        "-force"
+    ])
+
+    # log FC
+    log_fc_smooth_dir = os.path.join(template_dir, "log_fc_smooth")
+    stats_log_fc_dir = os.path.join(template_dir, "stats_log_fc")
+    os.makedirs(stats_log_fc_dir, exist_ok=True)
+    run_cmd([
+        "fixelcfestats",
+        log_fc_smooth_dir,
+        files_list_path,
+        design_matrix_path,
+        contrast_matrix_path,
+        connectivity_matrix,
+        stats_log_fc_dir,
+        "-force"
+    ])
+
+    # FDC
+    fdc_smooth_dir = os.path.join(template_dir, "fdc_smooth")
+    stats_fdc_dir = os.path.join(template_dir, "stats_fdc")
+    os.makedirs(stats_fdc_dir, exist_ok=True)
+    run_cmd([
+        "fixelcfestats",
+        fdc_smooth_dir,
+        files_list_path,
+        design_matrix_path,
+        contrast_matrix_path,
+        connectivity_matrix,
+        stats_fdc_dir,
+        "-force"
+    ])
 
 
 def visualize_fa(csv_file):
@@ -349,63 +442,110 @@ def visualize_fa(csv_file):
     plt.show()
 
 
-def calculate_fa_stats(csv_file):
-    """
-    Reads a CSV file containing FA values along a tract and computes summary statistics.
 
-    Assumes that each row corresponds to one subject and each column corresponds to an
-    along-tract position.
-
-    Returns:
-        stats_dict (dict): Dictionary containing:
-            - "mean_per_position": Series with the mean FA for each along-tract position.
-            - "std_per_position": Series with the standard deviation of FA per position.
-            - "overall_mean": Overall mean FA across all positions.
-            - "overall_std": Overall standard deviation of FA values.
-            - "data": The original DataFrame.
+def process_fa_stats(input_file):
     """
-    # Read the CSV file into a DataFrame
-    data = pd.read_csv(csv_file, skiprows=1, header=None, delim_whitespace=True)
+    Reads a file containing FA values for streamlines along nodes,
+    computes summary statistics, and saves the results into a text file under
+    root/group_analysis/stats.
+
+    Assumptions:
+      - Each row corresponds to a streamline.
+      - Each column corresponds to a sampling node.
+
+    The output file will contain one row per node with the following columns:
+      - Node (node number, starting at 1)
+      - Mean_FA (mean FA value)
+      - Std_FA (standard deviation of FA)
+    """
+
+    data = pd.read_csv(input_file, header=None, comment='#', sep=r'\s+')
     data = data.astype(float)
 
-    # Calculate mean and standard deviation for each along-tract position (i.e., each column)
-    mean_per_position = data.mean(axis=0)
-    std_per_position = data.std(axis=0)
+    # Compute node-wise mean and standard deviation
+    mean_per_node = data.mean(axis=0)
+    std_per_node = data.std(axis=0)
 
-    # Calculate overall mean and standard deviation across all FA values in the DataFrame
-    overall_mean = data.values.mean()
-    overall_std = data.values.std()
+    # Generate the output filename based on the input file name
+    base = os.path.basename(input_file)
+    name, _ = os.path.splitext(base)
+    output_filename = f"{name}_statistics.txt"
 
-    stats_dict = {
-        "mean_per_position": mean_per_position,
-        "std_per_position": std_per_position,
-        "overall_mean": overall_mean,
-        "overall_std": overall_std,
-        "data": data
-    }
+    # Define the target directory
+    output_dir = os.path.join("root", "group_analysis", "stats")
+    os.makedirs(output_dir, exist_ok=True)
+    output_file = os.path.join(output_dir, output_filename)
 
-    return stats_dict
+    # Create a DF with the results
+    stats_df = pd.DataFrame({
+        "Node": mean_per_node.index + 1,
+        "Mean_FA": mean_per_node.values,
+        "Std_FA": std_per_node.values
+    })
 
+    # Save the DataFrame to a text file with tab-separated columns.
+    stats_df.to_csv(output_file, sep='\t', index=False)
+    print(f"Statistics saved to {output_file}")
 
-def perform_ttest(stats1, stats2, paired=True):
+    # Return a dictionary that includes both the summary stats and the raw data
+    return {"mean_per_node": mean_per_node, "std_per_node": std_per_node, "data": data}
+
+def perform_nodewise_ttest(stats1, stats2, paired=False, fdr_adjust=True):
     """
-    Performs a t-test comparing the per-subject mean FA values from two FA statistics dictionaries.
+    Performs a t-test at each node between two FA datasets
+    and applies FDR correction to the p-values.
+
+    Parameters:
+        stats1, stats2 (dict): Outputs from process_fa_stats containing the "data" field.
+        paired (bool): If True, a paired t-test is conducted (ttest_rel); otherwise, an independent t-test (ttest_ind) is used.
+        fdr_adjust (bool): If True, FDR correction is applied to the p-values.
+
+    Returns:
+        results (DataFrame): Contains for each node:
+            - Node: Node index
+            - t_stat: The t statistic
+            - p_value: The original p-value from the t-test
+            - p_value_fdr: The FDR-adjusted p-value (if fdr_adjust is True; otherwise same as p_value)
     """
 
-    # Compute per-subject mean FA values from the original data
-    subject_means1 = stats1["data"].mean(axis=1)
-    subject_means2 = stats2["data"].mean(axis=1)
+    # Extract the data matrices from the stats dictionaries.
+    data1 = stats1["data"]
+    data2 = stats2["data"]
 
-    # For a paired t-test, ensure both arrays have the same length.
-    if paired and len(subject_means1) != len(subject_means2):
-        raise ValueError("For a paired t-test, both datasets must have the same number of subjects.")
+    # Ensure both datasets have the same number of nodes (columns)
+    if data1.shape[1] != data2.shape[1]:
+        raise ValueError("Both datasets must have the same number of nodes (columns).")
 
-    if paired:
-        t_stat, p_value = ttest_rel(subject_means1, subject_means2)
+    t_stats = []
+    p_values = []
+    nodes = range(1, data1.shape[1] + 1)
+
+    # Conduct the t-test at each node (adjust index by subtracting 1 for actual column position)
+    for i, node in enumerate(nodes):
+        values1 = data1.iloc[:, i]
+        values2 = data2.iloc[:, i]
+        if paired:
+            t_stat, p_val = stats.ttest_rel(values1, values2)
+        else:
+            t_stat, p_val = stats.ttest_ind(values1, values2)
+        t_stats.append(t_stat)
+        p_values.append(p_val)
+
+    # Apply FDR correction using the Benjamini-Hochberg method if requested
+    if fdr_adjust:
+        # multipletests returns a tuple where the adjusted p-values are at index 1
+        _, p_values_fdr, _, _ = multipletests(p_values, method='fdr_bh')
     else:
-        t_stat, p_value = ttest_ind(subject_means1, subject_means2)
+        p_values_fdr = p_values
 
-    return {"t_statistic": t_stat, "p_value": p_value}
+    results = pd.DataFrame({
+        "Node": list(nodes),
+        "t_stat": t_stats,
+        "p_value": p_values,
+        "p_value_fdr": p_values_fdr
+    })
+
+    return results
 
 
 def visualize_peak_length(peaks_txt):
@@ -468,12 +608,23 @@ def main():
     #post_process_fixel_metrics(template_dir, subject_dirs)
 
     print(f"\n========= Running group tractography =========\n")
-    run_group_tractography(template_dir, args.nthreads)
+    #run_group_tractography(template_dir, args.nthreads)
+
+    print(f"\n========= Create and Run GLM =========\n")
+    create_and_run_glm(template_dir, subject_dirs)
 
 
 if __name__ == "__main__":
-    main()
+    #main()
     #visualize_fa("/media/nas/nikita/test_study2_1sub/test_302/along_tract/CST_left_fa.csv")
     #visualize_fa("/media/nas/nikita/test_study2_1sub/test_302/along_tract/AF_right_fa.csv")
     #visualize_peak_length("/media/nas/nikita/test_study2_1sub/test_302/along_tract/CST_left_peaks.txt")
-    #print(calculate_fa_stats("/media/nas/nikita/test_study2_1sub/test_302/along_tract/CST_left_peaks.txt"))
+
+    input_file_left = "/media/nas/nikita/test_study2_1sub/test_302/along_tract/AF_left_fa.csv"
+    input_file_right = "/media/nas/nikita/test_study2_1sub/test_302/along_tract/AF_right_fa.csv"
+    stats_left = process_fa_stats(input_file_left)
+    stats_right = process_fa_stats(input_file_right)
+
+    ttest_results = perform_nodewise_ttest(stats_left, stats_right, paired=True, fdr_adjust=True)
+
+    print(ttest_results.to_string(index=False))
