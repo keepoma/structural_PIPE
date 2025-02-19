@@ -238,7 +238,7 @@ def process_all_subjects_fixels(root):
                 "-fc",
                 fixel_mask_rel,
                 fc_dir_rel,
-                "IN.mif",
+                f"{subject_id}.mif",
                 "-force"
             ])
 
@@ -263,7 +263,7 @@ def post_process_fixel_metrics(template_dir, subject_dirs):
     # Compute the logarithm for each subject's fc file.
     for subj_dir in subject_dirs:
         subject_id = os.path.basename(subj_dir)
-        fc_file = os.path.join(fc_dir, "IN.mif")
+        fc_file = os.path.join(fc_dir, f"{subject_id}.mif")
         log_fc_file = os.path.join(log_fc_dir, f"{subject_id}.mif")
         run_cmd(["mrcalc", fc_file, "-log", log_fc_file, "-force"])
 
@@ -275,7 +275,7 @@ def post_process_fixel_metrics(template_dir, subject_dirs):
     for subj_dir in subject_dirs:
         subject_id = os.path.basename(subj_dir)
         fd_file = os.path.join(template_dir, "fd", f"{subject_id}.mif")
-        fc_file = os.path.join(fc_dir, "IN.mif")
+        fc_file = os.path.join(fc_dir, f"{subject_id}.mif")
         fdc_file = os.path.join(fdc_dir, f"{subject_id}.mif")
         run_cmd(["mrcalc", fd_file, fc_file, "-mult", fdc_file])
 
