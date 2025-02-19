@@ -23,7 +23,8 @@ def get_subject_paths(subject_dir):
         "two_nifti": os.path.join(subject_dir, "raw", "2_nifti"),
         "five_dwi": os.path.join(subject_dir, "raw", "5_dwi"),
         "mat_dir": os.path.join(subject_dir, "mat"),
-        "tck_dir": os.path.join(subject_dir, "tck")
+        "tck_dir": os.path.join(subject_dir, "tck"),
+        "atlas_dir": os.path.join(subject_dir, "atlas")
     }
     return paths
 

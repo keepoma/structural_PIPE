@@ -41,7 +41,7 @@ def generate_tracks_and_sift(paths, nthreads):
         "-number", "1000k",
         smaller_tracks,
         "-nthreads", str(nthreads),
-        "-fo"
+        "-force"
     ])
 
     # SIFT filtering on the 10mio tracks
@@ -105,6 +105,7 @@ def atlas_generation(paths, nthreads, subject_id):
     lh_trg = os.path.join(subjects_dir, subject_id, "label", "lh.hcpmmp1.annot")
     rh_src = os.path.join(subjects_dir, "fsaverage", "label", "rh.hcpmmp1.annot")
     rh_trg = os.path.join(subjects_dir, subject_id, "label", "rh.hcpmmp1.annot")
+
     run_cmd([
         "mri_surf2surf",
         "--srcsubject", "fsaverage",
@@ -113,6 +114,7 @@ def atlas_generation(paths, nthreads, subject_id):
         "--sval-annot", lh_src,
         "--tval", lh_trg
     ])
+
     run_cmd([
         "mri_surf2surf",
         "--srcsubject", "fsaverage",
@@ -123,9 +125,9 @@ def atlas_generation(paths, nthreads, subject_id):
     ])
 
     # Create atlas outputs in the designated raw atlas folder
-    atlas_dir = paths["raw_atlas"]
-    os.makedirs(atlas_dir, exist_ok=True)
+    atlas_dir = paths["atlas_dir"]
     atlas_mgz = os.path.join(atlas_dir, "hcpmmp1.mgz")
+
     run_cmd([
         "mri_aparc2aseg",
         "--old-ribbon",
@@ -133,6 +135,7 @@ def atlas_generation(paths, nthreads, subject_id):
         "--annot", "hcpmmp1",
         "-o", atlas_mgz
     ])
+
     atlas_mif = os.path.join(atlas_dir, "hcpmmp1.mif")
     run_cmd([
         "mrconvert",
@@ -140,6 +143,7 @@ def atlas_generation(paths, nthreads, subject_id):
         atlas_mgz,
         atlas_mif
     ])
+
     parcels_nocoreg = os.path.join(atlas_dir, "hcpmmp1_parcels_nocoreg.mif")
     run_cmd([
         "labelconvert",
@@ -148,30 +152,33 @@ def atlas_generation(paths, nthreads, subject_id):
         "/home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_ordered.txt",
         parcels_nocoreg
     ])
+
+    # Watchout for errors at this stage, removed "-inverse" flag, implemented struct2diff matrix
     parcels_coreg = os.path.join(atlas_dir, "hcpmmp1_parcels_coreg.mif")
+    struct2diff_fsl = os.path.join(paths["mat_dir"], "struct2diff_fsl.mat")
     run_cmd([
         "mrtransform",
         parcels_nocoreg,  # using the parcels generated above
-        "-linear", transform_mat,
-        "-inverse",
+        "-linear", struct2diff_fsl,
         "-datatype", "uint32",
         parcels_coreg
     ])
 
 
-def connectome_generation(paths, nthreads):
+def connectome_generation(paths):
     """
     Generate the connectome matrix from the filtered tractogram and atlas parcels.
     """
-    parcels_coreg = os.path.join(paths["raw_atlas"], "hcpmmp1_parcels_coreg.mif")
-    connectome_csv = os.path.join(paths["raw_atlas"], "hcpmmp1.csv")
-    assignments_csv = os.path.join(paths["raw_atlas"], "assignments_hcpmmp1.csv")
+
+    parcels_coreg = os.path.join(paths["atlas_dir"], "hcpmmp1_parcels_coreg.mif")
+    connectome_csv = os.path.join(paths["atlas_dir"], "hcpmmp1.csv")
+    assignments_csv = os.path.join(paths["atlas_dir"], "assignments_hcpmmp1.csv")
     run_cmd([
         "tck2connectome",
         "-symmetric",
         "-zero_diagonal",
         "-scale_invnodevol",
-        os.path.join(paths["eight_tck"], "sift_1mio.tck"),
+        os.path.join(paths["tck_dir"], "sift_1mio.tck"),
         parcels_coreg,
         connectome_csv,
         "-out_assignment", assignments_csv
@@ -180,17 +187,13 @@ def connectome_generation(paths, nthreads):
 
 def process_subject(paths, nthreads):
     """
-    Process an individual subject through seeding, tracking, ROI localization,
+    Process an individual subject through seeding, tracking, (ROI localization?),
     atlas generation, and connectome matrix generation.
     """
     # Do not change the working directory; instead, work with absolute paths.
     subject_id = os.path.basename(paths["subject_dir"])
 
-    streamline_seeding(paths, nthreads)
-    generate_tracks_and_sift(paths, nthreads)
-    #roi_localization(paths, nthreads)
-    atlas_generation(paths, nthreads, subject_id)
-    connectome_generation(paths, nthreads)
+
 
 
 def main():
@@ -198,35 +201,35 @@ def main():
     Main pipeline function: parses arguments, builds subject paths, registers T1 to DWI,
     and processes each subject.
     """
+
     args = get_args()
     root = os.path.abspath(args.root)
     subject_dirs = get_subject_dirs(root, exclude="group_level_analysis")
 
     for subj_dir in subject_dirs:
-        print(f"\n========= Processing Subject: {os.path.basename(subj_dir)} =========\n")
-
-        # Retrieve standard paths and update with additional folder keys
         paths = get_subject_paths(subj_dir)
-        paths.update({
-            "subject_dir": subj_dir,
-            "six_mif": os.path.join(subj_dir, "IN", "6_mif"),
-            "eight_tck": os.path.join(subj_dir, "IN", "8_tck"),
-            "five_dwi": os.path.join(subj_dir, "IN", "5_dwi"),
-            "seven_mat": os.path.join(subj_dir, "IN", "7_mat"),
-            "two_nifti": os.path.join(subj_dir, "IN", "2_nifti"),
-            "raw_atlas": os.path.join(subj_dir, "raw", "9_atlas")
-        })
+        os.makedirs(paths["tck_dir"], exist_ok=True)
+        os.makedirs(paths["atlas_dir"], exist_ok=True)
+        subject_id = os.path.basename(paths["subject_dir"])
 
-        # Create directories if they do not exist
-        for key in ["six_mif", "eight_tck", "five_dwi", "seven_mat", "two_nifti", "raw_atlas"]:
-            os.makedirs(paths[key], exist_ok=True)
+        print(f"\n========= Executing script for Subject: {os.path.basename(subj_dir)} =========\n")
 
-        # Register T1 to dMRI using the provided registration function.
+        print(f"\n========= Registering T1 and 5TT to DWI-space for Subject: {os.path.basename(subj_dir)} =========\n")
         register_t1_and_5tt_to_dwi(paths, args.nthreads)
 
-        # Process the subject through the pipeline.
-        process_subject(paths, args.nthreads)
+        print(f"\n========= Performing streamline seeding for Subject: : {os.path.basename(subj_dir)} =========\n")
+        streamline_seeding(paths)
 
+        print(f"\n========= Generating whole-brain tracks and applying SIFT for Subject: {os.path.basename(subj_dir)} =========\n")
+        generate_tracks_and_sift(paths, args.nthreads)
+
+        # roi_localization(paths, args.nthreads)
+
+        print(f"\n========= Generating Freesurfer/HCP-based atlas for Subject: {os.path.basename(subj_dir)} =========\n")
+        atlas_generation(paths, args.nthreads, subject_id)
+
+        print(f"\n========= Generating connectome matrix for Subject: {os.path.basename(subj_dir)} =========\n")
+        connectome_generation(paths)
 
 if __name__ == "__main__":
     main()
