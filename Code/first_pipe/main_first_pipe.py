@@ -150,7 +150,7 @@ def preprocess_dwi(paths, nthreads):
 
 def response_function(paths, nthreads):
     """
-    Performs response estimation, FOD estimation, and intensity normalization in one function.
+    Performs response function estimation
     """
 
     # Helper lambda for constructing file paths
@@ -165,7 +165,11 @@ def response_function(paths, nthreads):
     ])
 
 
-def FOD_normalization(paths, nthreads):
+def FOD_normalization_peaks(paths, nthreads):
+    """
+    Calculates FOD, performs intensity normalization and generates peaks
+    based on individual AND group response functions.
+    """
 
     # Helper lambda for constructing file paths
     five_path = lambda subpath: os.path.join(paths["five_dwi"], subpath)
@@ -350,7 +354,7 @@ def main():
         paths = get_subject_paths(subj_dir)
 
         print(f"\n========= Performing FOD and normalization for Subject: {os.path.basename(subj_dir)} =========\n")
-        FOD_normalization(paths, args.nthreads)
+        FOD_normalization_peaks(paths, args.nthreads)
 
         print(f"\n========= Running tractography for Subject: {os.path.basename(subj_dir)} =========\n")
         tractseg(paths, subj_dir)

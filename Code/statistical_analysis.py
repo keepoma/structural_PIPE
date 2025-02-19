@@ -2,10 +2,10 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from statsmodels.stats.multitest import multipletests
+#from statsmodels.stats.multitest import multipletests
 from scipy import stats
 from contextlib import contextmanager
-from Code.helpers import run_cmd, get_subject_paths, get_subject_dirs, get_args
+from helpers import run_cmd, get_subject_paths, get_subject_dirs, get_args
 
 @contextmanager
 def change_dir(new_dir):
@@ -263,7 +263,7 @@ def post_process_fixel_metrics(template_dir, subject_dirs):
     # Compute the logarithm for each subject's fc file.
     for subj_dir in subject_dirs:
         subject_id = os.path.basename(subj_dir)
-        fc_file = os.path.join(fc_dir, f"{subject_id}.mif")
+        fc_file = os.path.join(fc_dir, "IN.mif")
         log_fc_file = os.path.join(log_fc_dir, f"{subject_id}.mif")
         run_cmd(["mrcalc", fc_file, "-log", log_fc_file, "-force"])
 
@@ -275,7 +275,7 @@ def post_process_fixel_metrics(template_dir, subject_dirs):
     for subj_dir in subject_dirs:
         subject_id = os.path.basename(subj_dir)
         fd_file = os.path.join(template_dir, "fd", f"{subject_id}.mif")
-        fc_file = os.path.join(fc_dir, f"{subject_id}.mif")
+        fc_file = os.path.join(fc_dir, "IN.mif")
         fdc_file = os.path.join(fdc_dir, f"{subject_id}.mif")
         run_cmd(["mrcalc", fd_file, fc_file, "-mult", fdc_file])
 
@@ -585,19 +585,19 @@ def main():
     os.makedirs(group_output_directory, exist_ok=True)
 
     print(f"\n========= Calculating Group RF =========\n")
-    compute_group_response_functions(root, group_output_directory, args.nthreads)
+    #compute_group_response_functions(root, group_output_directory, args.nthreads)
 
     print(f"\n========= Building FOD template and Registering Subjects =========\n")
-    population_template_and_register(root, args.nthreads)
+    #population_template_and_register(root, args.nthreads)
 
     print(f"\n========= Warping and creating Template Mask =========\n")
-    warp_masks_and_create_template_mask(root, args.nthreads)
+    #warp_masks_and_create_template_mask(root, args.nthreads)
 
     print(f"\n========= Creating Group Fixel Mask =========\n")
-    create_group_fixel_mask(template_dir, args.nthreads)
+    #create_group_fixel_mask(template_dir, args.nthreads)
 
     print(f"\n========= Processing fixels for each subject =========\n")
-    process_all_subjects_fixels(root)
+    #process_all_subjects_fixels(root)
 
     print(f"\n========= Post Processing fixel Metrics =========\n")
     post_process_fixel_metrics(template_dir, subject_dirs)
@@ -610,16 +610,16 @@ def main():
 
 
 if __name__ == "__main__":
-    #main()
+    main()
     #visualize_fa("/media/nas/nikita/test_study2_1sub/test_302/along_tract/CST_left_fa.csv")
     #visualize_fa("/media/nas/nikita/test_study2_1sub/test_302/along_tract/AF_right_fa.csv")
     #visualize_peak_length("/media/nas/nikita/test_study2_1sub/test_302/along_tract/CST_left_peaks.txt")
 
-    input_file_left = "/media/nas/nikita/test_study2_1sub/test_302/along_tract/AF_left_fa.csv"
-    input_file_right = "/media/nas/nikita/test_study2_1sub/test_302/along_tract/AF_right_fa.csv"
-    stats_left = process_fa_stats(input_file_left)
-    stats_right = process_fa_stats(input_file_right)
+    #input_file_left = "/media/nas/nikita/test_study2_1sub/test_302/along_tract/AF_left_fa.csv"
+    #input_file_right = "/media/nas/nikita/test_study2_1sub/test_302/along_tract/AF_right_fa.csv"
+    #stats_left = process_fa_stats(input_file_left)
+    #stats_right = process_fa_stats(input_file_right)
 
-    ttest_results = perform_nodewise_ttest(stats_left, stats_right, paired=True, fdr_adjust=True)
+    #ttest_results = perform_nodewise_ttest(stats_left, stats_right, paired=True, fdr_adjust=True)
 
-    print(ttest_results.to_string(index=False))
+    #print(ttest_results.to_string(index=False))
