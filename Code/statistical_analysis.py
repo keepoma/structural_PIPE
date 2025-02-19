@@ -585,19 +585,19 @@ def main():
     os.makedirs(group_output_directory, exist_ok=True)
 
     print(f"\n========= Calculating Group RF =========\n")
-    #compute_group_response_functions(root, group_output_directory, args.nthreads)
+    compute_group_response_functions(root, group_output_directory, args.nthreads)
 
     print(f"\n========= Building FOD template and Registering Subjects =========\n")
-    #population_template_and_register(root, args.nthreads)
+    population_template_and_register(root, args.nthreads)
 
     print(f"\n========= Warping and creating Template Mask =========\n")
-    #warp_masks_and_create_template_mask(root, args.nthreads)
+    warp_masks_and_create_template_mask(root, args.nthreads)
 
     print(f"\n========= Creating Group Fixel Mask =========\n")
-    #create_group_fixel_mask(template_dir, args.nthreads)
+    create_group_fixel_mask(template_dir, args.nthreads)
 
     print(f"\n========= Processing fixels for each subject =========\n")
-    #process_all_subjects_fixels(root)
+    process_all_subjects_fixels(root)
 
     print(f"\n========= Post Processing fixel Metrics =========\n")
     post_process_fixel_metrics(template_dir, subject_dirs)
