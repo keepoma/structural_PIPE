@@ -175,7 +175,7 @@ def process_all_subjects_fixels(root):
       - Compute fixels from the warped FOD
       - Reorient the fixels
       - Establish fixel correspondence for both FD and FC metrics
-      - Compute a fixel metric (FC) using warp2metric.
+      - Compute FC
     """
 
     subject_dirs = get_subject_dirs(root)
@@ -335,8 +335,6 @@ def create_and_run_glm(template_dir, subject_dirs):
       - fd_smooth/
       - log_fc_smooth/
       - fdc_smooth/
-
-    The connectivity matrix is assumed to reside in a subdirectory "matrix" of template_dir.
     """
 
     # Define paths for the GLM text files within the template directory.
