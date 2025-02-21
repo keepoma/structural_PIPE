@@ -9,11 +9,16 @@ to be skipped
 """
 
 
-def tractography_resample_and_extract_metrics(subj_dir, tract_names, nthreads=max(4, os.cpu_count() - 10)):
+def tractography_resample_and_extract_metrics(subj_dir, nthreads=max(4, os.cpu_count() - 10)):
     """
     Process a single subject by looping through each tract.
     This is the only function imported from this module into main_first_pipe
     """
+    
+    # Build the full path to the tract_name.txt file
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    tract_names_file = os.path.join(script_dir, "tract_name.txt")
+    tract_names = pd.read_csv(tract_names_file, header=None)[0].tolist()
 
     for tract_name in tract_names:
 

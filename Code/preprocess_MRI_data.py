@@ -24,6 +24,7 @@ def convert_scans(paths, nthreads):
     one_path = lambda subpath: os.path.join(paths["one_raw"], subpath)
 
     # Convert T1 scan
+    os.makedirs(paths["two_nifti"], exist_ok=True)
     t1_nii = os.path.join(paths["two_nifti"], "t1.nii.gz")
     t1_mif = os.path.join(paths["two_nifti"], "t1.mif")
     run_cmd([
@@ -56,6 +57,7 @@ def convert_scans(paths, nthreads):
         "-force"
     ])
     # Convert dMRI AP scan
+    os.makedirs(paths["five_dwi"], exist_ok=True)
     run_cmd([
         "mrconvert", "-nthreads", str(nthreads),
         "-strides", "1,2,3,4",

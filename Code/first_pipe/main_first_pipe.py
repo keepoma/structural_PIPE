@@ -74,19 +74,9 @@ def tensor_and_scalar_metrics(paths, nthreads):
 
 
 def main():
-    # Runs the helper module for cmd arguments
     args = get_args()
-
-    # Creates an alphabetically sorted list of absolute paths to directories under given root.
-    # Ignores non-directories and group level analysis folder
-    global root
     root = os.path.abspath(args.root)
     subject_dirs = get_subject_dirs(root, "group_analysis")
-
-    # Build the full path to the tract_name.txt file
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    tract_names_file = os.path.join(script_dir, "tract_name.txt")
-    tract_names = pd.read_csv(tract_names_file, header=None)[0].tolist()
 
     is_preprocessed = ask_yes_no("Is every subject in this folder preprocessed?")
     has_registration = ask_yes_no("Has the registration of T1 and 5tt to dwi been done?")
@@ -94,12 +84,6 @@ def main():
     for subj_dir in subject_dirs:
         # Retrieve standard paths
         paths = get_subject_paths(subj_dir)
-
-        # Creating necessary directories
-        os.makedirs(paths["two_nifti"], exist_ok=True)
-        os.makedirs(paths["five_dwi"], exist_ok=True)
-        os.makedirs(paths["mat_dir"], exist_ok=True)
-
         fancy_print("Executing script for Subject:", subj_dir)
 
         if not is_preprocessed:
@@ -111,9 +95,10 @@ def main():
             fancy_print("Calculating Response Function", subj_dir)
             preproc.response_function(paths, args.nthreads)
 
-    group_output_directory = os.path.join(root, "group_analysis")
-    print(f"\n========= Calculating Group Response Function =========\n")
-    sa.compute_group_response_functions(root, group_output_directory, args.nthreads)
+    if len(subject_dirs) > 1:
+        group_output_directory = os.path.join(root, "group_analysis")
+        print(f"\n========= Calculating Group Response Function =========\n")
+        sa.compute_group_response_functions(root, group_output_directory, args.nthreads)
 
     for subj_dir in subject_dirs:
         paths = get_subject_paths(subj_dir)
@@ -133,7 +118,7 @@ def main():
             register_t1_and_5tt_to_dwi(paths, args.nthreads)
 
         fancy_print("Track generation, resampling and metrics generation", subj_dir)
-        tractography_resample_and_extract_metrics(subj_dir, tract_names)
+        tractography_resample_and_extract_metrics(subj_dir)
 
         print(f"\n========= Subject: {os.path.basename(subj_dir)} COMPLETE =========\n")
 
