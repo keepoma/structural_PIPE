@@ -4,6 +4,10 @@ import Code.statistical_analysis as sa
 from Code.helpers import run_cmd, get_subject_dirs, get_subject_paths, get_args, ask_yes_no, fancy_print
 from Code.registration import register_t1_and_5tt_to_dwi
 
+"""
+Currently relies on tensors and dMRI metrics generated in first pipe
+"""
+
 
 def streamline_seeding(paths):
     """
@@ -47,25 +51,68 @@ def generate_tracks_and_sift(paths, nthreads):
     ])
 
     # SIFT filtering on the 10mio tracks
-    sift_output = os.path.join(paths["tck_dir"], "sift_1mio.tck")
+    """
+    sift2_output = os.path.join(paths["tck_dir"], "sift_1mio.tck")
     run_cmd([
         "tcksift", "-act", fivett_coreg,
         "-term_number", "1000000",
         tckgen_output, os.path.join(paths["five_dwi"], "wm_norm.mif"),
-        sift_output,
+        sift2_output,
         "-nthreads", str(nthreads),
         "-fo"
+    ])
+    """
+
+    # SIFT2 filtering
+    sift2_output = os.path.join(paths["tck_dir"], "sift2weights.csv")
+    mu_file = os.path.join(paths["tck_dir"], "mu.txt")
+    coeff_file = os.path.join(paths["tck_dir"], "tck_coeffs.txt")
+    run_cmd([
+        "tcksift2",
+        tckgen_output,
+        os.path.join(paths["five_dwi"], "wm_norm.mif"),
+        sift2_output,
+        "-out_mu", mu_file,
+        "-out_coeffs", coeff_file,
+        "-act", fivett_coreg,
+        "-nthreads", str(nthreads)
     ])
 
-    # Create a smaller sift file
-    smaller_sift = os.path.join(paths["tck_dir"], "smallerSIFT_1000k.tck")
+
+def generate_tdis(paths, nthreads):
+    """
+        Generate Track Density Images :
+          - A high-resolution TDI.
+          - A T1-aligned, scaled TDI (using the mu value from SIFT2).
+        """
+
+    # Define file paths
+    tckgen_output = os.path.join(paths["tck_dir"], "tracks_10mio.tck")
+    sift2_output = os.path.join(paths["tck_dir"], "sift2weights.csv")
+    t1_file = os.path.join(paths["two_nifti"], "t1.mif")
+    mu_file = os.path.join(paths["tck_dir"], "mu.txt")
+
+    tdi_output = os.path.join(paths["tck_dir"], "tdi.mif")
+    tdi_t1_output = os.path.join(paths["tck_dir"], "tdi_T1.mif")
+
+    # Generate high-resolution TDI.
     run_cmd([
-        "tckedit", sift_output,
-        "-number", "1000k",
-        smaller_sift,
+        "tckmap",
+        tckgen_output,
+        tdi_output,
+        "-tck_weights_in", sift2_output,
+        "-vox", "0.25",
+        "-datatype", "uint16",
         "-nthreads", str(nthreads),
-        "-fo"
+        "-force"
     ])
+
+    # Generate T1-aligned and scaled TDI.
+    cmd = (
+        f"tckmap {tckgen_output} - -template {t1_file} -precise -nthreads {nthreads} | "
+        f"mrcalc - $(cat {mu_file}) -mult {tdi_t1_output} -force"
+    )
+    run_cmd(["bash", "-c", cmd])
 
 
 def roi_localization(paths, nthreads):
@@ -168,24 +215,28 @@ def atlas_generation(paths, nthreads, subject_id):
     ])
 
 
-def connectome_generation(paths):
+def connectome_generation(paths, nthreads):
     """
     Generate the connectome matrix from the filtered tractogram and atlas parcels.
     Nodes and edges
     """
 
+    tckgen_output = os.path.join(paths["tck_dir"], "tracks_10mio.tck")
     parcels_coreg = os.path.join(paths["atlas_dir"], "hcpmmp1_parcels_coreg.mif")
     connectome_csv = os.path.join(paths["atlas_dir"], "hcpmmp1.csv")
     assignments_csv = os.path.join(paths["atlas_dir"], "assignments_hcpmmp1.csv")
+    sift2_output = os.path.join(paths["tck_dir"], "sift2weights.csv")
+
     run_cmd([
         "tck2connectome",
-        "-symmetric",
-        "-zero_diagonal",
-        "-scale_invnodevol",
-        os.path.join(paths["tck_dir"], "sift_1mio.tck"),
+        "-tck_weights_in", sift2_output,
+        tckgen_output,
         parcels_coreg,
         connectome_csv,
-        "-out_assignment", assignments_csv
+        "-out_assignment", assignments_csv,
+        "-symmetric", "-zero_diagonal",
+        "-nthreads", str(nthreads),
+        "-force"
     ])
     #mrview hcpmmp1_parcels_coreg.mif -connectome.init hcpmmp1_parcels_coreg.mif -connectome.load hcpmmp1.csv
 
@@ -196,11 +247,223 @@ def connectome_generation(paths):
     ])
 
     # Constructing a representation of true edge routes
-    sift_1mio = os.path.join(paths["tck_dir"], "sift_1mio.tck")
+    # I think Boshra uses the nocoreg parcels, make sure to check this step
+    exemplars = os.path.join(paths["tck_dir"], "exemplars.tck")
+    parcels_coreg = os.path.join(paths["atlas_dir"], "hcpmmp1_parcels_coreg.mif")
+
     run_cmd([
-        "connectome2tck", sift_1mio, assignments_csv,
-        "exemplar", "-files", "single",
-        "-exemplars", parcels_coreg
+        "connectome2tck", tckgen_output, assignments_csv,
+        exemplars, "-tck_weights_in", sift2_output,
+        "-exemplars", parcels_coreg,
+        "-files", "single",
+        "-nthreads", str(nthreads),
+        "-force"
+    ])
+
+
+def calculate_tensors_and_dmri_metrics(paths, nthreads):
+    """
+    Calculate diffusion tensors and derive dMRI metrics (FA, ADC, AD, RD)
+    from preprocessed DWI data.
+    """
+
+    dwi_image = os.path.join(paths["five_dwi"], "dwi_den_unr_pre_unbia.mif")
+    mask_image = os.path.join(paths["five_dwi"], "mask.mif")
+    tensors_output = os.path.join(paths["five_dwi"], "tensors.mif")
+
+    # Calculate the diffusion tensor from the preprocessed DWI data
+    run_cmd([
+        "dwi2tensor",
+        dwi_image,
+        "-mask", mask_image,
+        tensors_output,
+        "-nthreads", str(nthreads),
+        "-force"
+    ])
+
+    # Define outputs for the diffusion MRI metrics.
+    fa_output = os.path.join(paths["five_dwi"], "fa.mif")
+    adc_output = os.path.join(paths["five_dwi"], "adc.mif")
+    ad_output = os.path.join(paths["five_dwi"], "ad.mif")
+    rd_output = os.path.join(paths["five_dwi"], "rd.mif")
+
+    # Fractional Anisotropy map
+    run_cmd([
+        "tensor2metric",
+        tensors_output,
+        "-mask", mask_image,
+        "-fa", fa_output,
+        "-nthreads", str(nthreads),
+        "-force"
+    ])
+
+    # Apparent Diffusion Coefficient map
+    run_cmd([
+        "tensor2metric",
+        tensors_output,
+        "-mask", mask_image,
+        "-adc", adc_output,
+        "-nthreads", str(nthreads),
+        "-force"
+    ])
+
+    # Calculate the Axial Diffusivity map
+    run_cmd([
+        "tensor2metric",
+        tensors_output,
+        "-mask", mask_image,
+        "-ad", ad_output,
+        "-nthreads", str(nthreads),
+        "-force"
+    ])
+
+    # Calculate the Radial Diffusivity map
+    run_cmd([
+        "tensor2metric",
+        tensors_output,
+        "-mask", mask_image,
+        "-rd", rd_output,
+        "-nthreads", str(nthreads),
+        "-force"
+    ])
+
+
+def generate_weighted_connectome_matrices(paths, nthreads):
+    """
+    Generate dMRI metrics along streamlines and construct connectome matrices weighted by these metrics.
+
+    This function performs the following steps:
+      1. For each diffusion metric (FA, ADC, AD, RD), sample the underlying image along the streamlines
+         to compute a mean value per streamline
+      2. Generate connectome matrices weighted by each metric by scaling the streamline contributions
+      3. Calculate the average streamline length between node pairs
+    """
+
+    tck_file = os.path.join(paths["tck_dir"], "tracks_10mio.tck")
+    parcels_file = os.path.join(paths["atlas_dir"], "hcpmmp1_parcels_coreg.mif")
+    weights_file = os.path.join(paths["tck_dir"], "sift2weights.csv")
+
+    # Define output file paths for the streamline metric sampling.
+    out_fa = os.path.join(paths["connectome_dir"], "tck_meanFA.csv")
+    out_adc = os.path.join(paths["connectome_dir"], "tck_meanADC.csv")
+    out_ad = os.path.join(paths["connectome_dir"], "tck_meanAD.csv")
+    out_rd = os.path.join(paths["connectome_dir"], "tck_meanRD.csv")
+
+    # Sample dMRI metrics along the streamlines (tcksample with "-stat_tck mean").
+    run_cmd([
+        "tcksample",
+        tck_file,
+        os.path.join(paths["five_dwi"], "fa.mif"),
+        out_fa,
+        "-stat_tck", "mean",
+        "-nthreads", str(nthreads),
+        "-force"
+    ])
+
+    run_cmd([
+        "tcksample",
+        tck_file,
+        os.path.join(paths["five_dwi"], "adc.mif"),
+        out_adc,
+        "-stat_tck", "mean",
+        "-nthreads", str(nthreads),
+        "-force"
+    ])
+
+    run_cmd([
+        "tcksample",
+        tck_file,
+        os.path.join(paths["five_dwi"], "ad.mif"),
+        out_ad,
+        "-stat_tck", "mean",
+        "-nthreads", str(nthreads),
+        "-force"
+    ])
+
+    run_cmd([
+        "tcksample",
+        tck_file,
+        os.path.join(paths["five_dwi"], "rd.mif"),
+        out_rd,
+        "-stat_tck", "mean",
+        "-nthreads", str(nthreads),
+        "-force"
+    ])
+
+    # Generate connectome matrices weighted by each metric.
+    # For FA-weighted connectome:
+    run_cmd([
+        "tck2connectome",
+        tck_file,
+        parcels_file,
+        os.path.join(paths["connectome_dir"], "connectome_fa.csv"),
+        "-tck_weights_in", weights_file,
+        "-scale_file", out_fa,
+        "-stat_edge", "mean",
+        "-symmetric",
+        "-zero_diagonal",
+        "-nthreads", str(nthreads),
+        "-force"
+    ])
+
+    # For ADC-weighted connectome:
+    run_cmd([
+        "tck2connectome",
+        tck_file,
+        parcels_file,
+        os.path.join(paths["connectome_dir"], "connectome_adc.csv"),
+        "-tck_weights_in", weights_file,
+        "-scale_file", out_adc,
+        "-stat_edge", "mean",
+        "-symmetric",
+        "-zero_diagonal",
+        "-nthreads", str(nthreads),
+        "-force"
+    ])
+
+    # For AD-weighted connectome:
+    run_cmd([
+        "tck2connectome",
+        tck_file,
+        parcels_file,
+        os.path.join(paths["connectome_dir"], "connectome_ad.csv"),
+        "-tck_weights_in", weights_file,
+        "-scale_file", out_ad,
+        "-stat_edge", "mean",
+        "-symmetric",
+        "-zero_diagonal",
+        "-nthreads", str(nthreads),
+        "-force"
+    ])
+
+    # For RD-weighted connectome:
+    run_cmd([
+        "tck2connectome",
+        tck_file,
+        parcels_file,
+        os.path.join(paths["connectome_dir"], "connectome_rd.csv"),
+        "-tck_weights_in", weights_file,
+        "-scale_file", out_rd,
+        "-stat_edge", "mean",
+        "-symmetric",
+        "-zero_diagonal",
+        "-nthreads", str(nthreads),
+        "-force"
+    ])
+
+    # Generate a connectome matrix of mean streamline lengths
+    run_cmd([
+        "tck2connectome",
+        tck_file,
+        parcels_file,
+        os.path.join(paths["connectome_dir"], "meanlength.csv"),
+        "-tck_weights_in", weights_file,
+        "-scale_length",
+        "-stat_edge", "mean",
+        "-symmetric",
+        "-zero_diagonal",
+        "-nthreads", str(nthreads),
+        "-force"
     ])
 
 
@@ -256,11 +519,17 @@ def main():
         streamline_seeding(paths)
         fancy_print("Generating whole-brain tracks and applying SIFT", subj_dir)
         generate_tracks_and_sift(paths, args.nthreads)
+        fancy_print("Generating TDIs and aligning T1", subj_dir)
+        generate_tdis(paths, args.nthreads)
         # roi_localization(paths, args.nthreads)
         fancy_print("Generating Freesurfer/HCP-based atlas", subj_dir)
         atlas_generation(paths, args.nthreads, subject_id)
         fancy_print("Generating connectome matrix", subj_dir)
-        connectome_generation(paths)
+        connectome_generation(paths, args.nthreads)
+        fancy_print("Calculating Tensor and related metrics", subj_dir)
+        calculate_tensors_and_dmri_metrics(paths. args.nthreads)
+        fancy_print("Connectome weighting by metrics", subj_dir)
+        generate_weighted_connectome_matrices(paths, args.nthreads)
 
         print(f"\n========= Subject: {os.path.basename(subj_dir)} COMPLETE =========\n")
 

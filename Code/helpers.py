@@ -24,7 +24,8 @@ def get_subject_paths(subject_dir):
         "five_dwi": os.path.join(subject_dir, "raw", "5_dwi"),
         "mat_dir": os.path.join(subject_dir, "mat"),
         "tck_dir": os.path.join(subject_dir, "tck"),
-        "atlas_dir": os.path.join(subject_dir, "atlas")
+        "atlas_dir": os.path.join(subject_dir, "atlas"),
+        "connectome_dir": os.path.join(subject_dir, "connectome")
     }
     return paths
 
