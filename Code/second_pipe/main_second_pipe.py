@@ -74,7 +74,7 @@ def roi_localization(paths, nthreads):
     Excluded from main pipeline by default
     """
 
-    # Extract fibers that pass through the ROI
+    # Extract fibers that pass through the custom ROI
     roi_output = os.path.join(paths["eight_tck"], "FA.tck")
     run_cmd([
         "tckedit",
@@ -126,7 +126,7 @@ def atlas_generation(paths, nthreads, subject_id):
         "--tval", rh_trg
     ])
 
-    # Create atlas outputs in the designated raw atlas folder
+    # Create atlas outputs in the designated atlas folder
     atlas_dir = paths["atlas_dir"]
     atlas_mgz = os.path.join(atlas_dir, "hcpmmp1.mgz")
 
@@ -171,6 +171,7 @@ def atlas_generation(paths, nthreads, subject_id):
 def connectome_generation(paths):
     """
     Generate the connectome matrix from the filtered tractogram and atlas parcels.
+    Nodes and edges
     """
 
     parcels_coreg = os.path.join(paths["atlas_dir"], "hcpmmp1_parcels_coreg.mif")
@@ -186,6 +187,21 @@ def connectome_generation(paths):
         connectome_csv,
         "-out_assignment", assignments_csv
     ])
+    #mrview hcpmmp1_parcels_coreg.mif -connectome.init hcpmmp1_parcels_coreg.mif -connectome.load hcpmmp1.csv
+
+    # Representing nodes as cortical meshes
+    mesh_obj = os.path.join(paths["atlas_dir"], "hcpmmp1_mesh.obj")
+    run_cmd([
+        "label2mesh", parcels_coreg, mesh_obj
+    ])
+
+    # Constructing a representation of true edge routes
+    sift_1mio = os.path.join(paths["tck_dir"], "sift_1mio.tck")
+    run_cmd([
+        "connectome2tck", sift_1mio, assignments_csv,
+        "exemplar", "-files", "single",
+        "-exemplars", parcels_coreg
+    ])
 
 
 def main():
@@ -196,16 +212,19 @@ def main():
 
     args = get_args()
     root = os.path.abspath(args.root)
-    subject_dirs = get_subject_dirs(root, exclude="group_level_analysis")
+    subject_dirs = get_subject_dirs(root, "group_analysis")
 
     is_preprocessed = ask_yes_no("Is every subject in this folder preprocessed?")
     has_registration = ask_yes_no("Has the registration of T1 and 5tt to dwi been done?")
 
     for subj_dir in subject_dirs:
         paths = get_subject_paths(subj_dir)
+        os.makedirs(paths["two_nifti"], exist_ok=True)
+        os.makedirs(paths["five_dwi"], exist_ok=True)
+        os.makedirs(paths["mat_dir"], exist_ok=True)
         os.makedirs(paths["tck_dir"], exist_ok=True)
         os.makedirs(paths["atlas_dir"], exist_ok=True)
-        subject_id = os.path.basename(paths["subject_dir"])
+        subject_id = os.path.basename(subj_dir)
 
         print(f"\n========= Executing script for Subject: {os.path.basename(subj_dir)} =========")
 

@@ -5,7 +5,7 @@ import numpy as np
 #from statsmodels.stats.multitest import multipletests
 from scipy import stats
 from contextlib import contextmanager
-from helpers import run_cmd, get_subject_paths, get_subject_dirs, get_args
+from .helpers import run_cmd, get_subject_paths, get_subject_dirs, get_args
 
 @contextmanager
 def change_dir(new_dir):
