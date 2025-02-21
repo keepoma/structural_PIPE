@@ -1,6 +1,6 @@
 import os
-from first_pipe.helpers import run_cmd, get_subject_dirs, get_subject_paths, get_args
-from first_pipe.registration import register_t1_and_5tt_to_dwi
+from Code.helpers import run_cmd, get_subject_dirs, get_subject_paths, get_args
+from Code.registration import register_t1_and_5tt_to_dwi
 
 
 def streamline_seeding(paths):
