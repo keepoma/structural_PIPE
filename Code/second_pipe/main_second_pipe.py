@@ -5,7 +5,7 @@ from Code.helpers import run_cmd, get_subject_dirs, get_subject_paths, get_args,
 from Code.registration import register_t1_and_5tt_to_dwi
 
 """
-Currently relies on tensors and dMRI metrics generated in first pipe
+Main pipeline for connectome construction
 """
 
 
@@ -51,6 +51,7 @@ def generate_tracks_and_sift(paths, nthreads):
     ])
 
     # SIFT filtering on the 10mio tracks
+    # Replaced this code with more current tcksift2
     """
     sift2_output = os.path.join(paths["tck_dir"], "sift_1mio.tck")
     run_cmd([
@@ -75,15 +76,16 @@ def generate_tracks_and_sift(paths, nthreads):
         "-out_mu", mu_file,
         "-out_coeffs", coeff_file,
         "-act", fivett_coreg,
-        "-nthreads", str(nthreads)
+        "-nthreads", str(nthreads),
+        "-force"
     ])
 
 
 def generate_tdis(paths, nthreads):
     """
         Generate Track Density Images :
-          - A high-resolution TDI.
-          - A T1-aligned, scaled TDI (using the mu value from SIFT2).
+          - A high-resolution TDI
+          - A T1-aligned, scaled TDI using the mu value from SIFT2
         """
 
     # Define file paths
@@ -91,7 +93,6 @@ def generate_tdis(paths, nthreads):
     sift2_output = os.path.join(paths["tck_dir"], "sift2weights.csv")
     t1_file = os.path.join(paths["two_nifti"], "t1.mif")
     mu_file = os.path.join(paths["tck_dir"], "mu.txt")
-
     tdi_output = os.path.join(paths["tck_dir"], "tdi.mif")
     tdi_t1_output = os.path.join(paths["tck_dir"], "tdi_T1.mif")
 
@@ -117,8 +118,8 @@ def generate_tdis(paths, nthreads):
 
 def roi_localization(paths, nthreads):
     """
-    This funciton is customizable for a specific ROI. Experimental.
-    Excluded from main pipeline by default
+    This function is customizable for a specific ROI.
+    Experimental, excluded from main pipeline by default
     """
 
     # Extract fibers that pass through the custom ROI
@@ -193,7 +194,7 @@ def atlas_generation(paths, nthreads, subject_id):
         atlas_mif
     ])
 
-    # The labelconvert path will be an issue on non conda mrtrix installations
+    # The labelconvert path will be an issue on non-conda mrtrix installations
     parcels_nocoreg = os.path.join(atlas_dir, "hcpmmp1_parcels_nocoreg.mif")
     run_cmd([
         "labelconvert",
@@ -515,6 +516,7 @@ def main():
             fancy_print("Registering T1 to dMRI Space", subj_dir)
             register_t1_and_5tt_to_dwi(paths, args.nthreads)
 
+        """ commented out for debugging
         fancy_print("Performing streamline seeding", subj_dir)
         streamline_seeding(paths)
         fancy_print("Generating whole-brain tracks and applying SIFT", subj_dir)
@@ -522,13 +524,14 @@ def main():
         fancy_print("Generating TDIs and aligning T1", subj_dir)
         generate_tdis(paths, args.nthreads)
         # roi_localization(paths, args.nthreads)
+        """
         fancy_print("Generating Freesurfer/HCP-based atlas", subj_dir)
         atlas_generation(paths, args.nthreads, subject_id)
         fancy_print("Generating connectome matrix", subj_dir)
         connectome_generation(paths, args.nthreads)
         fancy_print("Calculating Tensor and related metrics", subj_dir)
         calculate_tensors_and_dmri_metrics(paths. args.nthreads)
-        fancy_print("Connectome weighting by metrics", subj_dir)
+        fancy_print("Generating connectome weighting by metrics", subj_dir)
         generate_weighted_connectome_matrices(paths, args.nthreads)
 
         print(f"\n========= Subject: {os.path.basename(subj_dir)} COMPLETE =========\n")
