@@ -2,6 +2,7 @@
 gsg/
 FINAL_first_pipe/
 population_template*/
+Code/__init__.py
 Code/backup_structural_PIPE
 Code/venv
 Code/__pycache__
