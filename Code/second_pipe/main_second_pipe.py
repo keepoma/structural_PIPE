@@ -1,5 +1,7 @@
 import os
-from Code.helpers import run_cmd, get_subject_dirs, get_subject_paths, get_args
+import Code.preprocess_MRI_data as preproc
+import Code.statistical_analysis as sa
+from Code.helpers import run_cmd, get_subject_dirs, get_subject_paths, get_args, ask_yes_no, fancy_print
 from Code.registration import register_t1_and_5tt_to_dwi
 
 
@@ -144,6 +146,7 @@ def atlas_generation(paths, nthreads, subject_id):
         atlas_mif
     ])
 
+    # The labelconvert path will be an issue on non conda mrtrix installations
     parcels_nocoreg = os.path.join(atlas_dir, "hcpmmp1_parcels_nocoreg.mif")
     run_cmd([
         "labelconvert",
@@ -185,17 +188,6 @@ def connectome_generation(paths):
     ])
 
 
-def process_subject(paths, nthreads):
-    """
-    Process an individual subject through seeding, tracking, (ROI localization?),
-    atlas generation, and connectome matrix generation.
-    """
-    # Do not change the working directory; instead, work with absolute paths.
-    subject_id = os.path.basename(paths["subject_dir"])
-
-
-
-
 def main():
     """
     Main pipeline function: parses arguments, builds subject paths, registers T1 to DWI,
@@ -206,30 +198,53 @@ def main():
     root = os.path.abspath(args.root)
     subject_dirs = get_subject_dirs(root, exclude="group_level_analysis")
 
+    is_preprocessed = ask_yes_no("Is every subject in this folder preprocessed?")
+    has_registration = ask_yes_no("Has the registration of T1 and 5tt to dwi been done?")
+
     for subj_dir in subject_dirs:
         paths = get_subject_paths(subj_dir)
         os.makedirs(paths["tck_dir"], exist_ok=True)
         os.makedirs(paths["atlas_dir"], exist_ok=True)
         subject_id = os.path.basename(paths["subject_dir"])
 
-        print(f"\n========= Executing script for Subject: {os.path.basename(subj_dir)} =========\n")
+        print(f"\n========= Executing script for Subject: {os.path.basename(subj_dir)} =========")
 
-        print(f"\n========= Registering T1 and 5TT to DWI-space for Subject: {os.path.basename(subj_dir)} =========\n")
-        register_t1_and_5tt_to_dwi(paths, args.nthreads)
+        if not is_preprocessed:
+            fancy_print("Preprocessing", subj_dir)
+            fancy_print("Converting Scans", subj_dir)
+            preproc.convert_scans(paths, args.nthreads)
+            fancy_print("Preprocessing dMRI Data", subj_dir)
+            preproc.preprocess_dwi(paths, args.nthreads)
+            fancy_print("Calculating Response Function", subj_dir)
+            preproc.response_function(paths, args.nthreads)
 
-        print(f"\n========= Performing streamline seeding for Subject: : {os.path.basename(subj_dir)} =========\n")
+    group_output_directory = os.path.join(root, "group_analysis")
+    print(f"\n========= Calculating Group Response Function =========\n")
+    sa.compute_group_response_functions(root, group_output_directory, args.nthreads)
+
+    for subj_dir in subject_dirs:
+        paths = get_subject_paths(subj_dir)
+
+        if not is_preprocessed:
+            fancy_print("Performing FOD and normalization", subj_dir)
+            preproc.FOD_normalization_peaks(paths, root, args.nthreads)
+
+        if not has_registration:
+            fancy_print("Registering T1 to dMRI Space", subj_dir)
+            register_t1_and_5tt_to_dwi(paths, args.nthreads)
+
+        fancy_print("Performing streamline seeding", subj_dir)
         streamline_seeding(paths)
-
-        print(f"\n========= Generating whole-brain tracks and applying SIFT for Subject: {os.path.basename(subj_dir)} =========\n")
+        fancy_print("Generating whole-brain tracks and applying SIFT", subj_dir)
         generate_tracks_and_sift(paths, args.nthreads)
-
         # roi_localization(paths, args.nthreads)
-
-        print(f"\n========= Generating Freesurfer/HCP-based atlas for Subject: {os.path.basename(subj_dir)} =========\n")
+        fancy_print("Generating Freesurfer/HCP-based atlas", subj_dir)
         atlas_generation(paths, args.nthreads, subject_id)
-
-        print(f"\n========= Generating connectome matrix for Subject: {os.path.basename(subj_dir)} =========\n")
+        fancy_print("Generating connectome matrix", subj_dir)
         connectome_generation(paths)
+
+        print(f"\n========= Subject: {os.path.basename(subj_dir)} COMPLETE =========\n")
+
 
 if __name__ == "__main__":
     main()

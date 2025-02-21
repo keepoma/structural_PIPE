@@ -7,10 +7,18 @@ This script contains general purpose importable preprocessing functions
 """
 
 
-def convert_scans(paths, nthreads, t1_folder, t2_folder, t2_df_folder, dwi_ap_folder, dwi_pa_folder):
+def convert_scans(paths, nthreads):
     """
     Convert anatomical and diffusion scans into standardized NIfTI or MIF formats.
     """
+
+    # Pending to save these to config file or something in case of script re-run
+    print("Please provide the following folder names: ")
+    t1_folder = prompt_for_folder("006_T1w_MPR", "T1 scan")
+    t2_folder = prompt_for_folder("008_T2w_SPC", "T2 scan")
+    t2_df_folder = prompt_for_folder("009_t2_space_dark-fluid_sag_p2_iso_0_8", "T2 FLAIR")
+    dwi_ap_folder = prompt_for_folder("016_dMRI_dir98_AP", "dMRI AP scan")
+    dwi_pa_folder = prompt_for_folder("019_dMRI_dir98_PA", "dMRI PA scan")
 
     # Helper lambda for paths from the one_raw directory
     one_path = lambda subpath: os.path.join(paths["one_raw"], subpath)

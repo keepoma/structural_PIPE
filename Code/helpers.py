@@ -72,3 +72,28 @@ def prompt_for_folder(default, description):
 
     user_input = input(f"Enter folder name for {description} [default: {default}] (press Enter for default): ").strip()
     return user_input if user_input else default
+
+
+def ask_yes_no(question):
+    """
+    Prompt the user with a yes/no question until
+    they enter a valid response. Returns True or False
+    """
+
+    while True:
+        answer = input(question + " [y/n]: ").strip().lower()
+        if answer in ("y", "yes"):
+            return True
+        elif answer in ("n", "no"):
+            return False
+        else:
+            print("Invalid input. Please type 'y' or 'n'.")
+
+
+def fancy_print(action, subj_dir):
+    """
+    Prints a standardized header
+    """
+
+    subject_name = os.path.basename(subj_dir)
+    print(f"\n========= {action} for Subject: {subject_name} =========\n")

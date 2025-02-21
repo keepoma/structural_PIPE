@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import Code.preprocess_MRI_data as preproc
 import Code.statistical_analysis as sa
-from Code.helpers import run_cmd, get_subject_paths, get_subject_dirs, get_args, prompt_for_folder
+from Code.helpers import run_cmd, get_subject_paths, get_subject_dirs, get_args, ask_yes_no, fancy_print
 from .tractography_TractSeg import tractography_resample_and_extract_metrics
 from Code.registration import register_t1_and_5tt_to_dwi
 
@@ -88,14 +88,8 @@ def main():
     tract_names_file = os.path.join(script_dir, "tract_name.txt")
     tract_names = pd.read_csv(tract_names_file, header=None)[0].tolist()
 
-    # Prompt the user for each folder name (with defaults provided)
-    # Pending to save these to config file or something
-    print("Please provide the following folder names: ")
-    t1_folder = prompt_for_folder("006_T1w_MPR", "T1 scan")
-    t2_folder = prompt_for_folder("008_T2w_SPC", "T2 scan")
-    t2_df_folder = prompt_for_folder("009_t2_space_dark-fluid_sag_p2_iso_0_8", "T2 FLAIR")
-    dwi_ap_folder = prompt_for_folder("016_dMRI_dir98_AP", "dMRI AP scan")
-    dwi_pa_folder = prompt_for_folder("019_dMRI_dir98_PA", "dMRI PA scan")
+    is_preprocessed = ask_yes_no("Is every subject in this folder preprocessed?")
+    has_registration = ask_yes_no("Has the registration of T1 and 5tt to dwi been done?")
 
     for subj_dir in subject_dirs:
         # Retrieve standard paths
@@ -106,16 +100,16 @@ def main():
         os.makedirs(paths["five_dwi"], exist_ok=True)
         os.makedirs(paths["mat_dir"], exist_ok=True)
 
-        print(f"\n========= Executing script for Subject: {os.path.basename(subj_dir)} =========\n")
+        fancy_print("Executing script for Subject:", subj_dir)
 
-        print(f"\n========= Converting Scans for Subject: {os.path.basename(subj_dir)} =========\n")
-        preproc.convert_scans(paths, args.nthreads, t1_folder, t2_folder, t2_df_folder, dwi_ap_folder, dwi_pa_folder)
-
-        print(f"\n========= Preprocessing dMRI Data for Subject: {os.path.basename(subj_dir)} =========\n")
-        preproc.preprocess_dwi(paths, args.nthreads)
-
-        print(f"\n========= Calculating Response Function for Subject: {os.path.basename(subj_dir)} =========\n")
-        preproc.response_function(paths, args.nthreads)
+        if not is_preprocessed:
+            fancy_print("Preprocessing", subj_dir)
+            fancy_print("Converting Scans", subj_dir)
+            preproc.convert_scans(paths, args.nthreads)
+            fancy_print("Preprocessing dMRI Data", subj_dir)
+            preproc.preprocess_dwi(paths, args.nthreads)
+            fancy_print("Calculating Response Function", subj_dir)
+            preproc.response_function(paths, args.nthreads)
 
     group_output_directory = os.path.join(root, "group_analysis")
     print(f"\n========= Calculating Group Response Function =========\n")
@@ -124,19 +118,21 @@ def main():
     for subj_dir in subject_dirs:
         paths = get_subject_paths(subj_dir)
 
-        print(f"\n========= Performing FOD and normalization for Subject: {os.path.basename(subj_dir)} =========\n")
-        preproc.FOD_normalization_peaks(paths, root, args.nthreads)
+        if not is_preprocessed:
+            fancy_print("Performing FOD and normalization", subj_dir)
+            preproc.FOD_normalization_peaks(paths, root, args.nthreads)
 
-        print(f"\n========= Running tractography for Subject: {os.path.basename(subj_dir)} =========\n")
+        fancy_print("Running tractography", subj_dir)
         tractseg(paths, subj_dir)
 
-        print(f"\n========= Generating Tensor and Scalar Metrics for Subject: {os.path.basename(subj_dir)} =========\n")
+        fancy_print("Generating Tensor and Scalar Metrics", subj_dir)
         tensor_and_scalar_metrics(paths, args.nthreads)
 
-        print(f"\n========= Registering T1 to dMRI Space for Subject: {os.path.basename(subj_dir)} =========\n")
-        register_t1_and_5tt_to_dwi(paths, args.nthreads)
+        if not has_registration:
+            fancy_print("Registering T1 to dMRI Space", subj_dir)
+            register_t1_and_5tt_to_dwi(paths, args.nthreads)
 
-        print(f"\n========= Track generation, resampling and metrics generation for Subject: {os.path.basename(subj_dir)} =========\n")
+        fancy_print("Track generation, resampling and metrics generation", subj_dir)
         tractography_resample_and_extract_metrics(subj_dir, tract_names)
 
         print(f"\n========= Subject: {os.path.basename(subj_dir)} COMPLETE =========\n")
