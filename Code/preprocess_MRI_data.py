@@ -45,7 +45,7 @@ def convert_scans(paths, nthreads):
     run_cmd([
         "mrconvert", "-nthreads", str(nthreads),
         "-strides", "1,2,3",
-        one_path(t2_folder  ), os.path.join(paths["two_nifti"], "t2.nii.gz"),
+        one_path(t2_folder), os.path.join(paths["two_nifti"], "t2.nii.gz"),
         "-force"
     ])
     # Convert dark-fluid T2 scan

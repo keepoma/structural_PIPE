@@ -52,6 +52,7 @@ def generate_tracks_and_sift(paths, nthreads):
 
     # SIFT filtering on the 10mio tracks
     # Replaced this code with more current tcksift2
+    # FF: SIFT1 prunes streamlines. After SIFT1, all remaining streamlines have the same weight (1)
     """
     sift2_output = os.path.join(paths["tck_dir"], "sift_1mio.tck")
     run_cmd([
@@ -65,6 +66,11 @@ def generate_tracks_and_sift(paths, nthreads):
     """
 
     # SIFT2 filtering
+    """
+    FF: Unlike SIFT1, SIFT2 doesn’t prune streamlines but rather calculates a continuous weight
+    for each streamline so instead of removing them, SIFT2 scales each one by a factor
+    so that the overall tractogram better reflects the fiber densities.
+    """
     sift2_output = os.path.join(paths["tck_dir"], "sift2weights.csv")
     mu_file = os.path.join(paths["tck_dir"], "mu.txt")
     coeff_file = os.path.join(paths["tck_dir"], "tck_coeffs.txt")
@@ -229,6 +235,15 @@ def connectome_generation(paths, nthreads):
     assignments_csv = os.path.join(paths["atlas_dir"], "assignments_hcpmmp1.csv")
     sift2_output = os.path.join(paths["tck_dir"], "sift2weights.csv")
 
+    """
+    FF: As far as I understand, we dont use -scale_invnodevol nor -scale_invlenght,
+    because f.e. -scale_invnodevol tells tck2connectome to scale each connection by 
+    the inverse of the parcel volume, but we don't need that because we have the
+    external streamline weights from SIFT2 now
+    Are these combinable? 
+    """
+    # It would be interesting to consider scaling by parcel volume or connection length with
+    # -scale_invnodevol or -scale_invlength, respectively
     run_cmd([
         "tck2connectome",
         "-tck_weights_in", sift2_output,
