@@ -8,7 +8,7 @@ from registration import register_t1_and_5tt_to_dwi
 
 """
 Main pipeline for connectome construction
-Example run: python3 -m Code.second_pipe.main_second_pipe --root /home/nikita/subjects_folder
+Example run: python3 main_second_pipe.py --root /home/nikita/Nikita_MRI
 
 """
 
@@ -153,6 +153,7 @@ def freesurfer_atlas_generation(paths, nthreads, subject_id):
     # Run Freesurfer's recon-all using the subject ID
     # use command rm -rf $SUBJECTS_DIR/subject_id if rerunning
     t1_nii = os.path.join(paths["two_nifti"], "t1.nii.gz")
+
     run_cmd([
         "recon-all",
         "-s", subject_id,
@@ -189,22 +190,22 @@ def freesurfer_atlas_generation(paths, nthreads, subject_id):
     # Create atlas outputs in the designated atlas folder
     atlas_dir = paths["atlas_dir"]
     atlas_mgz = os.path.join(atlas_dir, "hcpmmp1.mgz")
+    atlas_mif = os.path.join(atlas_dir, "hcpmmp1.mif")
+
 
     run_cmd([
         "mri_aparc2aseg",
         "--old-ribbon",
-        "-s", subject_id,
+        "--s", subject_id,
         "--annot", "hcpmmp1",
-        "-o", atlas_mgz
+        "--o", atlas_mgz
     ])
 
-    atlas_mif = os.path.join(atlas_dir, "hcpmmp1.mif")
     run_cmd([
         "mrconvert",
         "-datatype", "uint32",
         atlas_mgz,
         atlas_mif,
-        "-threads", str(nthreads),
         "-force"
     ])
 
@@ -216,7 +217,6 @@ def freesurfer_atlas_generation(paths, nthreads, subject_id):
         "/home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_original.txt",
         "/home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_ordered.txt",
         parcels_nocoreg,
-        "-threads", str(nthreads),
         "-force"
     ])
 
@@ -229,7 +229,6 @@ def freesurfer_atlas_generation(paths, nthreads, subject_id):
         "-linear", struct2diff_fsl,
         "-datatype", "uint32",
         parcels_coreg,
-        "-threads", str(nthreads),
         "-force"
     ])
 
@@ -255,6 +254,7 @@ def nextbrain_atlas_generation(paths, nthreads, subject_id):
     os.makedirs(paths["atlas_dir"], exist_ok=True)
     t1_nii = os.path.join(paths["two_nifti"], "t1.nii.gz")
 
+
     """
     # Run NextBrain segmentation
     # This command is supposed to work with FireANTs or SynthMorph
@@ -263,8 +263,7 @@ def nextbrain_atlas_generation(paths, nthreads, subject_id):
     """
     run_cmd([
         "mri_histo_atlas_segment_fast",
-        # INPUT_SCAN
-        # OUTPUT_DIR
+        t1_nii, os.path.join(paths["atlas_dir"], "t1.nii.gz"),
         "1", str(nthreads)
     ])
 
@@ -326,7 +325,7 @@ def connectome_generation(paths, nthreads):
     """
 
     tckgen_output = os.path.join(paths["tck_dir"], "tracks_10mio.tck")
-    parcels_coreg = os.path.join(paths["atlas_dir"], "hcpmmp1_parcels_coreg.mif")
+    parcels_nocoreg = os.path.join(paths["atlas_dir"], "hcpmmp1_parcels_nocoreg.mif")
     connectome_csv = os.path.join(paths["atlas_dir"], "hcpmmp1.csv")
     assignments_csv = os.path.join(paths["atlas_dir"], "assignments_hcpmmp1.csv")
     sift2_output = os.path.join(paths["tck_dir"], "sift2weights.csv")
@@ -344,7 +343,7 @@ def connectome_generation(paths, nthreads):
         "tck2connectome",
         "-tck_weights_in", sift2_output,
         tckgen_output,
-        parcels_coreg,
+        parcels_nocoreg,
         connectome_csv,
         "-out_assignment", assignments_csv,
         "-symmetric", "-zero_diagonal",
@@ -356,18 +355,17 @@ def connectome_generation(paths, nthreads):
     # Representing nodes as cortical meshes
     mesh_obj = os.path.join(paths["atlas_dir"], "hcpmmp1_mesh.obj")
     run_cmd([
-        "label2mesh", parcels_coreg, mesh_obj
+        "label2mesh", parcels_nocoreg, mesh_obj,
+        "-force"
     ])
 
-    # Constructing a representation of true edge routes
-    # I think Boshra uses the nocoreg parcels, make sure to check this step
+    # Constructing a representation of true edge routes with exemplars
+    # I think Boshra uses the nocoreg parcels, make sure to check this step. Changed back to boshras
     exemplars = os.path.join(paths["tck_dir"], "exemplars.tck")
-    parcels_coreg = os.path.join(paths["atlas_dir"], "hcpmmp1_parcels_coreg.mif")
-
     run_cmd([
         "connectome2tck", tckgen_output, assignments_csv,
         exemplars, "-tck_weights_in", sift2_output,
-        "-exemplars", parcels_coreg,
+        "-exemplars", parcels_nocoreg,
         "-files", "single",
         "-nthreads", str(nthreads),
         "-force"
@@ -453,10 +451,11 @@ def generate_weighted_connectome_matrices(paths, nthreads):
     """
 
     tck_file = os.path.join(paths["tck_dir"], "tracks_10mio.tck")
-    parcels_file = os.path.join(paths["atlas_dir"], "hcpmmp1_parcels_coreg.mif")
+    parcels_file = os.path.join(paths["atlas_dir"], "hcpmmp1_parcels_nocoreg.mif")
     weights_file = os.path.join(paths["tck_dir"], "sift2weights.csv")
 
     # Define output file paths for the streamline metric sampling.
+    os.makedirs(paths["connectome_dir"], exist_ok=True)
     out_fa = os.path.join(paths["connectome_dir"], "tck_meanFA.csv")
     out_adc = os.path.join(paths["connectome_dir"], "tck_meanADC.csv")
     out_ad = os.path.join(paths["connectome_dir"], "tck_meanAD.csv")
@@ -632,14 +631,13 @@ def main():
         fancy_print("Generating TDIs and aligning T1", subj_dir)
         generate_tdis(paths, args.nthreads)
         # roi_localization(paths, args.nthreads)
-        """
-
         fancy_print("Generating Freesurfer/HCP-based atlas", subj_dir)
         freesurfer_atlas_generation(paths, args.nthreads, subject_id)
         fancy_print("Generating connectome matrix", subj_dir)
         connectome_generation(paths, args.nthreads)
         fancy_print("Calculating Tensor and related metrics", subj_dir)
-        calculate_tensors_and_dmri_metrics(paths. args.nthreads)
+        calculate_tensors_and_dmri_metrics(paths, args.nthreads)
+        """
         fancy_print("Generating connectome weighting by metrics", subj_dir)
         generate_weighted_connectome_matrices(paths, args.nthreads)
 

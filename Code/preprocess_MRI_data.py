@@ -1,5 +1,5 @@
 import os
-from Code.helpers.helpers import run_cmd, prompt_for_folder
+from helpers.helpers import run_cmd, prompt_for_folder
 
 
 """

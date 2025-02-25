@@ -8,4 +8,5 @@ Code/backup_structural_PIPE
 Code/venv
 Code/__pycache__
 Code/helpers/__init__.py
+Code/helpers/__pycache__/
 Code/Experiments/__init__.py

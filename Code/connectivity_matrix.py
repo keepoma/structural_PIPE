@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 from networkx.algorithms.community import girvan_newman
 from networkx.algorithms.community.quality import modularity
+import seaborn as sns
 
 
 def lookup_dictionary(lookup_txt):
@@ -192,6 +193,20 @@ def visualize_graph(G, lookup):
     plt.show()
 
 
+def fa_matrix():
+    # Load the connectome matrix
+    matrix = np.loadtxt('/home/nikita/Nikita_MRI/me/connectome/connectome_fa.csv',
+                        delimiter=',')
+
+    # Plot the heatmap
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(matrix, cmap='viridis', square=True)
+    plt.title('FA-weighted Connectome Matrix')
+    plt.xlabel('Region Index')
+    plt.ylabel('Region Index')
+    plt.show()
+
+
 def main():
     # Paths to your data files.
     sc_path = "/Users/nikitakaruzin/MRI/projects/BATMAN/DWI/hcpmmp1.csv"
@@ -223,4 +238,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    #main()
+    fa_matrix()
