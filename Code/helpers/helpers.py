@@ -90,7 +90,6 @@ def ask_yes_no(question):
         else:
             print("Invalid input. Please type 'y' or 'n'.")
 
-
 def fancy_print(action, subj_dir):
     """
     Prints a standardized header
@@ -98,3 +97,30 @@ def fancy_print(action, subj_dir):
 
     subject_name = os.path.basename(subj_dir)
     print(f"\n========= {action} for Subject: {subject_name} =========\n")
+
+
+def tensor_and_scalar_metrics(paths, nthreads):
+    """
+    Runs diffusion tensor and computes related metrics
+    """
+
+    five_path = lambda subpath: os.path.join(paths["five_dwi"], subpath)
+
+    # Diffusion tensor and ADC/FA computation
+    run_cmd([
+        "dwi2tensor", "-nthreads", str(nthreads),
+        five_path("dwi_den_unr_pre_unbia.mif"),
+        five_path("tensor.mif"), "-force"
+    ])
+
+    run_cmd([
+        "tensor2metric", "-nthreads", str(nthreads),
+        five_path("tensor.mif"),
+        "-adc", five_path("adc.mif"), "-force"
+    ])
+
+    run_cmd([
+        "tensor2metric", "-nthreads", str(nthreads),
+        five_path("tensor.mif"),
+        "-fa", five_path("fa.mif"), "-force"
+    ])

@@ -8,6 +8,38 @@ This code is also able to run as a standalone if the preprocessing part is
 to be skipped
 """
 
+def tract_and_endings_segmentation_TOMs(paths, subject_dir):
+    """
+    Runs tract segmentation, endings segmentation, and generates tract orientation maps.
+    """
+
+    # Helper lambda for paths in the 5_dwi folder
+    peaks_path = os.path.join(paths["two_nifti"], "fod_peaks_individual_RF.nii.gz")
+
+    # Tract segmentation
+    output_dir = os.path.join(subject_dir, "tractseg_output")
+    run_cmd([
+        "TractSeg",
+        "-i", peaks_path,
+        "-o", output_dir,
+        "--output_type", "tract_segmentation"
+    ])
+
+    # Endings segmentation
+    run_cmd([
+        "TractSeg",
+        "-i", peaks_path,
+        "-o", output_dir,
+        "--output_type", "endings_segmentation"
+    ])
+
+    #  Tract Orientation Maps
+    run_cmd([
+        "TractSeg",
+        "-i", peaks_path,
+        "-o", output_dir,
+        "--output_type", "TOM"
+    ])
 
 def tractography_resample_and_extract_metrics(subj_dir, nthreads=max(4, os.cpu_count() - 10)):
     """
