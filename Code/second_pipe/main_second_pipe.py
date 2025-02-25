@@ -198,7 +198,9 @@ def atlas_generation(paths, nthreads, subject_id):
         "mrconvert",
         "-datatype", "uint32",
         atlas_mgz,
-        atlas_mif
+        atlas_mif,
+        "-threads", str(nthreads),
+        "-force"
     ])
 
     # The labelconvert path will be an issue on non-conda mrtrix installations
@@ -208,7 +210,9 @@ def atlas_generation(paths, nthreads, subject_id):
         atlas_mif,
         "/home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_original.txt",
         "/home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_ordered.txt",
-        parcels_nocoreg
+        parcels_nocoreg,
+        "-threads", str(nthreads),
+        "-force"
     ])
 
     # Watchout for errors at this stage, removed "-inverse" flag, implemented struct2diff matrix
@@ -219,7 +223,9 @@ def atlas_generation(paths, nthreads, subject_id):
         parcels_nocoreg,  # using the parcels generated above
         "-linear", struct2diff_fsl,
         "-datatype", "uint32",
-        parcels_coreg
+        parcels_coreg,
+        "-threads", str(nthreads),
+        "-force"
     ])
 
 
