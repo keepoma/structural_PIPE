@@ -1,13 +1,11 @@
 .idea/
+.DS_Store
 gsg/
-FINAL_first_pipe/
 population_template*/
 Code/__init__.py
+Code/AF_peak_values.txt
 Code/backup_structural_PIPE
 Code/venv
 Code/__pycache__
-Code/first_pipe/__pycache__
-Code/second_pipe/__pycache__
-Code/boshras_scripts
-.DS_Store
-gsg
+Code/helpers/__init__.py
+Code/Experiments/__init__.py
