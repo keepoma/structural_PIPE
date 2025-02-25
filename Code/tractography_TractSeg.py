@@ -1,7 +1,7 @@
 import glob
 import os
 import pandas as pd
-from Code.helpers import run_cmd, get_args, get_subject_paths
+from helpers.helpers import run_cmd, get_args, get_subject_paths
 
 """
 This code is also able to run as a standalone if the preprocessing part is
@@ -17,7 +17,7 @@ def tractography_resample_and_extract_metrics(subj_dir, nthreads=max(4, os.cpu_c
 
     # Build the full path to the tract_name.txt file
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    tract_names_file = os.path.join(script_dir, "tract_name.txt")
+    tract_names_file = os.path.join(script_dir, "helpers", "tract_name.txt")
     tract_names = pd.read_csv(tract_names_file, header=None)[0].tolist()
 
     for tract_name in tract_names:
@@ -120,7 +120,7 @@ def process_all_subjects(root, tract_names_file, nthreads=max(4, os.cpu_count() 
 
 def main():
     args = get_args()
-    process_all_subjects(args.root, "tract_name.txt", args.nthreads)
+    process_all_subjects(args.root, "helpers/tract_name.txt", args.nthreads)
 
 
 if __name__ == "__main__":

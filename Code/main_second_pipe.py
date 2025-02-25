@@ -1,7 +1,7 @@
 import os
 import Code.preprocess_MRI_data as preproc
 import Code.statistical_analysis as sa
-from Code.helpers import run_cmd, get_subject_dirs, get_subject_paths, get_args, ask_yes_no, fancy_print
+from Code.helpers.helpers import run_cmd, get_subject_dirs, get_subject_paths, get_args, ask_yes_no, fancy_print
 from Code.registration import register_t1_and_5tt_to_dwi
 
 """

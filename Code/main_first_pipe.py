@@ -1,16 +1,13 @@
 import os
-import pandas as pd
-import Code.preprocess_MRI_data as preproc
-import Code.statistical_analysis as sa
-from Code.helpers import run_cmd, get_subject_paths, get_subject_dirs, get_args, ask_yes_no, fancy_print
-from .tractography_TractSeg import tractography_resample_and_extract_metrics
-from Code.registration import register_t1_and_5tt_to_dwi
-
+import preprocess_MRI_data as preproc
+import statistical_analysis as sa
+from helpers.helpers import run_cmd, get_subject_paths, get_subject_dirs, get_args, ask_yes_no, fancy_print
+from tractography_TractSeg import tractography_resample_and_extract_metrics
+from registration import register_t1_and_5tt_to_dwi
 
 """
 Main pipeline code. 
 """
-
 
 def tractseg(paths, subject_dir):
     """

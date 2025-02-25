@@ -1,5 +1,5 @@
 import os
-from Code.helpers import run_cmd, get_args
+from Code.helpers.helpers import run_cmd, get_args
 
 
 def register_t1_and_5tt_to_dwi(paths, nthreads):
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     Quick code used during troubleshooting 
     """
 
-    from Code.helpers import get_subject_paths
+    from Code.helpers.helpers import get_subject_paths
 
     args = get_args()
 
