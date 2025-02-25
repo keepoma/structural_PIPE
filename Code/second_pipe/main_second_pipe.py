@@ -6,6 +6,8 @@ from Code.registration import register_t1_and_5tt_to_dwi
 
 """
 Main pipeline for connectome construction
+Example run: python3 -m Code.second_pipe.main_second_pipe --root /home/nikita/subjects_folder
+
 """
 
 
@@ -140,13 +142,14 @@ def roi_localization(paths, nthreads):
     ])
 
 
-def atlas_generation(paths, nthreads, subject_id):
+def freesurfer_atlas_generation(paths, nthreads, subject_id):
     """
     Generate the Freesurfer/HCP-based atlas and perform label conversion.
     """
 
     os.makedirs(paths["atlas_dir"], exist_ok=True)
     # Run Freesurfer's recon-all using the subject ID
+    # use command rm -rf $SUBJECTS_DIR/subject_id if rerunning
     t1_nii = os.path.join(paths["two_nifti"], "t1.nii.gz")
     run_cmd([
         "recon-all",
@@ -222,6 +225,91 @@ def atlas_generation(paths, nthreads, subject_id):
         "mrtransform",
         parcels_nocoreg,  # using the parcels generated above
         "-linear", struct2diff_fsl,
+        "-datatype", "uint32",
+        parcels_coreg,
+        "-threads", str(nthreads),
+        "-force"
+    ])
+
+
+def nextbrain_atlas_generation(paths, nthreads, subject_id):
+    """
+    Generate the NextBrain atlas and prepare label conversion outputs.
+
+    Assumed to produce the following key files in paths atlas_dir:
+      - seg.left.mgz and seg.right.mgz: NextBrain segmentations for the left and right hemispheres.
+      - vols.left.csv and vols.right.csv: ROI volumes from the soft (posterior) segmentations.
+      - seg.left.rgb.mgz: a color-coded version of the soft segmentation.
+      - synthseg.mgz and SynthSeg_volumes.csv: outputs from the initial SynthSeg run.
+      - atlas_reg.nii.gz: registration to MNI space.
+      - lut.txt: a lookup table mapping label indices to anatomical names.
+      - atlas_nonlinear_reg.[left/right].nii.gz: registered cartoon images (for debugging).
+
+    For connectome generation, this function further merges the left/right segmentations,
+    converts the combined volume to MRtrix (.mif) format, performs label conversion using the
+    provided LUT, and applies a linear transform (e.g. from structural to diffusion space).
+    """
+
+    os.makedirs(paths["atlas_dir"], exist_ok=True)
+    t1_nii = os.path.join(paths["two_nifti"], "t1.nii.gz")
+
+    """
+    # Run NextBrain segmentation
+    # This command is supposed to work with FireANTs or SynthMorph
+    # SynthMorph example: 
+    # mri_histo_atlas_segment_fast $SUBJECTS_DIR/bert/mri/orig.mgz /path/to/output/bert_histo_atlas_segmentation/ 1 8
+    """
+    run_cmd([
+        "mri_histo_atlas_segment_fast",
+        # INPUT_SCAN
+        # OUTPUT_DIR
+        "1", str(nthreads)
+    ])
+
+    # Merge left/right hemisphere segmentations
+    left_seg = os.path.join(paths["atlas_dir"], "seg.left.mgz")
+    right_seg = os.path.join(paths["atlas_dir"], "seg.right.mgz")
+    combined_seg = os.path.join(paths["atlas_dir"], "seg.mgz")
+    run_cmd([
+        "mri_concat",
+        "--o", combined_seg,
+        left_seg,
+        right_seg
+    ])
+
+    # Convert combined segmentation to .mif
+    combined_seg_mif = os.path.join(paths["atlas_dir"], "nextbrain_seg.mif")
+    run_cmd([
+        "mrconvert",
+        "-datatype", "uint32",
+        combined_seg,
+        combined_seg_mif,
+        "-threads", str(nthreads),
+        "-force"
+    ])
+
+    # Perform label conversion using the NextBrain lookup table
+    # Here  assume that NextBrain outputs a file 'lut.txt' in the atlas directory.
+    # If NextBrain does not provide separate original/ordered LUTs, we use the same file for both.
+    lut_file = os.path.join(paths["atlas_dir"], "lut.txt")
+    parcels_nocoreg = os.path.join(paths["atlas_dir"], "nextbrain_parcels_nocoreg.mif")
+    run_cmd([
+        "labelconvert",
+        combined_seg_mif,
+        lut_file,  # source LUT
+        lut_file,  # target LUT (assumed to be the same)
+        parcels_nocoreg,
+        "-threads", str(nthreads),
+        "-force"
+    ])
+
+    # Coregister the parcels to diffusion space
+    struct2diff = os.path.join(paths["mat_dir"], "struct2diff.mat")
+    parcels_coreg = os.path.join(paths["atlas_dir"], "nextbrain_parcels_coreg.mif")
+    run_cmd([
+        "mrtransform",
+        parcels_nocoreg,
+        "-linear", struct2diff,
         "-datatype", "uint32",
         parcels_coreg,
         "-threads", str(nthreads),
@@ -534,6 +622,7 @@ def main():
             fancy_print("Registering T1 and 5tt to dMRI Space", subj_dir)
             register_t1_and_5tt_to_dwi(paths, args.nthreads)
 
+        """
         fancy_print("Performing streamline seeding", subj_dir)
         streamline_seeding(paths)
         fancy_print("Generating whole-brain tracks and applying SIFT", subj_dir)
@@ -541,8 +630,10 @@ def main():
         fancy_print("Generating TDIs and aligning T1", subj_dir)
         generate_tdis(paths, args.nthreads)
         # roi_localization(paths, args.nthreads)
+        """
+
         fancy_print("Generating Freesurfer/HCP-based atlas", subj_dir)
-        atlas_generation(paths, args.nthreads, subject_id)
+        freesurfer_atlas_generation(paths, args.nthreads, subject_id)
         fancy_print("Generating connectome matrix", subj_dir)
         connectome_generation(paths, args.nthreads)
         fancy_print("Calculating Tensor and related metrics", subj_dir)
