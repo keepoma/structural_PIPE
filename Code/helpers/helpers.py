@@ -164,4 +164,3 @@ def calculate_tensors_and_dmri_metrics(paths, nthreads):
         "-nthreads", str(nthreads),
         "-force"
     ])
-
