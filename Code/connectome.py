@@ -14,7 +14,7 @@ def connectome_generation(paths, nthreads):
     """
 
     tckgen_output = os.path.join(paths["tck_dir"], "tracks_10mio.tck")
-    parcels_nocoreg = os.path.join(paths["atlas_dir"], "hcpmmp1_parcels_nocoreg.mif")
+    parcels_coreg = os.path.join(paths["atlas_dir"], "hcpmmp1_parcels_coreg.mif")
     connectome_csv = os.path.join(paths["atlas_dir"], "hcpmmp1.csv")
     assignments_csv = os.path.join(paths["atlas_dir"], "assignments_hcpmmp1.csv")
     sift2_output = os.path.join(paths["tck_dir"], "sift2weights.csv")
@@ -32,7 +32,7 @@ def connectome_generation(paths, nthreads):
         "tck2connectome",
         "-tck_weights_in", sift2_output,
         tckgen_output,
-        parcels_nocoreg,
+        parcels_coreg,
         connectome_csv,
         "-out_assignment", assignments_csv,
         "-symmetric", "-zero_diagonal",
@@ -44,7 +44,7 @@ def connectome_generation(paths, nthreads):
     # Representing nodes as cortical meshes
     mesh_obj = os.path.join(paths["atlas_dir"], "hcpmmp1_mesh.obj")
     run_cmd([
-        "label2mesh", parcels_nocoreg, mesh_obj,
+        "label2mesh", parcels_coreg, mesh_obj,
         "-force"
     ])
 
@@ -54,7 +54,7 @@ def connectome_generation(paths, nthreads):
     run_cmd([
         "connectome2tck", tckgen_output, assignments_csv,
         exemplars, "-tck_weights_in", sift2_output,
-        "-exemplars", parcels_nocoreg,
+        "-exemplars", parcels_coreg,
         "-files", "single",
         "-nthreads", str(nthreads),
         "-force"
@@ -73,7 +73,7 @@ def generate_weighted_connectome_matrices(paths, nthreads):
     """
 
     tck_file = os.path.join(paths["tck_dir"], "tracks_10mio.tck")
-    parcels_file = os.path.join(paths["atlas_dir"], "hcpmmp1_parcels_nocoreg.mif")
+    parcels_file = os.path.join(paths["atlas_dir"], "hcpmmp1_parcels_coreg.mif")
     weights_file = os.path.join(paths["tck_dir"], "sift2weights.csv")
 
     # Define output file paths for the streamline metric sampling.

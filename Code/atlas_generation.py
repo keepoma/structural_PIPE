@@ -165,8 +165,10 @@ def freesurfer_atlas_generation(paths, nthreads, subject_id):
     run_cmd([
         "labelconvert",
         atlas_mif,
-        "/home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_original.txt",
-        "/home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_ordered.txt",
+        #"/home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_original.txt",
+        "/Users/nikitakaruzin/MRI/projects/BATMAN/Supplementary_Files/hcpmmp1_original.txt",
+        #"/home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_ordered.txt",
+        "/Users/nikitakaruzin/MRI/projects/BATMAN/Supplementary_Files/hcpmmp1_ordered.txt",
         parcels_nocoreg,
         "-force"
     ])
