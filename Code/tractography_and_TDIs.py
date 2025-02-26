@@ -3,15 +3,20 @@ from helpers.helpers import run_cmd
 
 
 """
-Module with funcitons corresponding to streamline seeding,
+Module with functions corresponding to streamline seeding,
 tracks, SIFT and TDIs
 """
 
 
 def streamline_seeding(paths):
     """
-    Perform streamline seeding using 5tt2gmwmi.
+    Perform streamline seeding using 5tt2gmwmi:
+    GM/WM Interface Seeding with a Precomputed Mask.
+    This differs from dynamic seeding (using -seed_dynamic and -crop_at_gmwmi)
+    mainly because the mask provides a more anatomically-informed seeding
+    by computing a mask from segmentation data.
     """
+
     os.makedirs(paths["mat_dir"], exist_ok=True)
     fivett_coreg = os.path.join(paths["mat_dir"], "5tt_coreg.mif")
     output_seed = os.path.join(paths["mat_dir"], "gmwmSeed_coreg.mif")
