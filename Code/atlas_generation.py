@@ -155,6 +155,7 @@ def freesurfer_atlas_generation(paths, nthreads, subject_id):
         "mrconvert",
         "-datatype", "uint32",
         atlas_mgz,
+        "-strides", "1,2,3",
         atlas_mif,
         "-force"
     ])

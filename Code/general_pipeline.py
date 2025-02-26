@@ -7,6 +7,12 @@ from helpers.helpers import (get_subject_paths, get_subject_dirs,
 from registration import register_t1_and_5tt_to_dwi
 
 
+"""
+This script contains the function with the main pipeline that shares the code necessary
+for both pipes. It's supposed to be imported and built upon.
+"""
+
+
 def general_pipeline():
     args = get_args()
     root = os.path.abspath(args.root)
@@ -27,7 +33,6 @@ def general_pipeline():
     for subj_dir in subject_dirs:
         # Retrieve standard paths
         paths = get_subject_paths(subj_dir)
-        subject_id = os.path.basename(subj_dir)
         fancy_print("Executing script for Subject:", subj_dir)
 
         if not is_preprocessed:
