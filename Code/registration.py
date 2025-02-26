@@ -1,5 +1,5 @@
 import os
-from helpers.helpers import run_cmd, get_args
+from helpers.helpers import run_cmd
 
 
 def register_t1_and_5tt_to_dwi(paths, nthreads):
@@ -32,14 +32,23 @@ def register_t1_and_5tt_to_dwi(paths, nthreads):
         "rm", b0_temp
     ])
 
-    # 5tt T1
+    # 5tt T1 fsl
     t1_mif = os.path.join(paths["two_nifti"], "t1.mif")
     t1_nii = os.path.join(paths["two_nifti"], "t1.nii.gz")
     fivett_nocoreg_mif = os.path.join(paths["two_nifti"], "5tt_nocoreg.mif")
-    # implement hsvs
     run_cmd([
         "5ttgen", "fsl", t1_mif,
         fivett_nocoreg_mif, "-force"
+    ])
+
+    # 5tt T1 hsvs
+    subjects_dir = os.environ.get("SUBJECTS_DIR", "")
+    fivett_nocoreg_hsvs_mif = os.path.join(paths["two_nifti"], "5tt_nocoreg_hsvs.mif")
+    run_cmd([
+        "5ttgen", "hsvs", subjects_dir,
+        fivett_nocoreg_hsvs_mif,
+        "-template", t1_mif,
+        "-nocrop"
     ])
 
     fivett_nocoreg_nii = os.path.join(paths["two_nifti"], "5tt_nocoreg.nii.gz")
@@ -86,22 +95,3 @@ def register_t1_and_5tt_to_dwi(paths, nthreads):
         "-nthreads", str(nthreads),
         "-force"
     ])
-
-if __name__ == "__main__":
-    """
-    Quick code used during troubleshooting 
-    """
-
-    from helpers.helpers import get_subject_paths
-
-    args = get_args()
-
-    root = os.path.abspath(args.root)
-    subject_dirs = sorted([
-        os.path.join(root, d) for d in os.listdir(root)
-        if os.path.isdir(os.path.join(root, d))
-    ])
-
-    for subj_dir in subject_dirs:
-        paths = get_subject_paths(subj_dir)
-        register_t1_and_5tt_to_dwi(paths, args.nthreads)
