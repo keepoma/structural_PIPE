@@ -30,7 +30,7 @@ def get_subject_paths(subject_dir):
     return paths
 
 
-def get_subject_dirs(root, exclude="group_analysis"):
+def get_subject_dirs(root):
     """
     Return a sorted list of subject directories excluding a specific folder
     """
@@ -38,7 +38,7 @@ def get_subject_dirs(root, exclude="group_analysis"):
     subject_dirs = sorted([
         os.path.join(root, d)
         for d in os.listdir(root)
-        if os.path.isdir(os.path.join(root, d)) and d != exclude
+        if os.path.isdir(os.path.join(root, d)) and d not in ("group_analysis", "logs")
     ])
     return subject_dirs
 
