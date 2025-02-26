@@ -99,28 +99,69 @@ def fancy_print(action, subj_dir):
     print(f"\n========= {action} for Subject: {subject_name} =========\n")
 
 
-def tensor_and_scalar_metrics(paths, nthreads):
+def calculate_tensors_and_dmri_metrics(paths, nthreads):
     """
-    Runs diffusion tensor and computes related metrics
+    Calculate diffusion tensors and derive dMRI metrics (FA, ADC, AD, RD)
+    from preprocessed DWI data.
     """
 
-    five_path = lambda subpath: os.path.join(paths["five_dwi"], subpath)
+    dwi_image = os.path.join(paths["five_dwi"], "dwi_den_unr_pre_unbia.mif")
+    mask_image = os.path.join(paths["five_dwi"], "mask.mif")
+    tensors_output = os.path.join(paths["five_dwi"], "tensors.mif")
 
-    # Diffusion tensor and ADC/FA computation
+    # Calculate the diffusion tensor from the preprocessed DWI data
     run_cmd([
-        "dwi2tensor", "-nthreads", str(nthreads),
-        five_path("dwi_den_unr_pre_unbia.mif"),
-        five_path("tensor.mif"), "-force"
+        "dwi2tensor",
+        dwi_image,
+        "-mask", mask_image,
+        tensors_output,
+        "-nthreads", str(nthreads),
+        "-force"
     ])
 
+    # Define outputs for the diffusion MRI metrics.
+    fa_output = os.path.join(paths["five_dwi"], "fa.mif")
+    adc_output = os.path.join(paths["five_dwi"], "adc.mif")
+    ad_output = os.path.join(paths["five_dwi"], "ad.mif")
+    rd_output = os.path.join(paths["five_dwi"], "rd.mif")
+
+    # Fractional Anisotropy map
     run_cmd([
-        "tensor2metric", "-nthreads", str(nthreads),
-        five_path("tensor.mif"),
-        "-adc", five_path("adc.mif"), "-force"
+        "tensor2metric",
+        tensors_output,
+        "-mask", mask_image,
+        "-fa", fa_output,
+        "-nthreads", str(nthreads),
+        "-force"
     ])
 
+    # Apparent Diffusion Coefficient map
     run_cmd([
-        "tensor2metric", "-nthreads", str(nthreads),
-        five_path("tensor.mif"),
-        "-fa", five_path("fa.mif"), "-force"
+        "tensor2metric",
+        tensors_output,
+        "-mask", mask_image,
+        "-adc", adc_output,
+        "-nthreads", str(nthreads),
+        "-force"
     ])
+
+    # Calculate the Axial Diffusivity map
+    run_cmd([
+        "tensor2metric",
+        tensors_output,
+        "-mask", mask_image,
+        "-ad", ad_output,
+        "-nthreads", str(nthreads),
+        "-force"
+    ])
+
+    # Calculate the Radial Diffusivity map
+    run_cmd([
+        "tensor2metric",
+        tensors_output,
+        "-mask", mask_image,
+        "-rd", rd_output,
+        "-nthreads", str(nthreads),
+        "-force"
+    ])
+

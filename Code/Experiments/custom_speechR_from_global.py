@@ -1,10 +1,29 @@
 import subprocess
 import itertools
+import os
+from helpers.helpers import run_cmd
 
 
 """
 description
 """
+
+def roi_localization(paths, nthreads):
+    """
+    This function is customizable for a specific ROI.
+    Experimental, excluded from main pipeline by default
+    """
+
+    # Extract fibers that pass through the custom ROI
+    roi_output = os.path.join(paths["eight_tck"], "FA.tck")
+    run_cmd([
+        "tckedit",
+        "-include", "-26.5,33.95,27.41,3",
+        os.path.join(paths["eight_tck"], "sift_1mio.tck"),
+        roi_output,
+        "-nthreads", str(nthreads),
+        "-fo"
+    ])
 
 name_parcelindices = {
     "44": 74,

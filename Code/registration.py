@@ -36,6 +36,7 @@ def register_t1_and_5tt_to_dwi(paths, nthreads):
     t1_mif = os.path.join(paths["two_nifti"], "t1.mif")
     t1_nii = os.path.join(paths["two_nifti"], "t1.nii.gz")
     fivett_nocoreg_mif = os.path.join(paths["two_nifti"], "5tt_nocoreg.mif")
+    # implement hsvs
     run_cmd([
         "5ttgen", "fsl", t1_mif,
         fivett_nocoreg_mif, "-force"
