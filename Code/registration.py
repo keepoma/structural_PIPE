@@ -9,6 +9,7 @@ def register_t1_and_5tt_to_dwi(paths, nthreads, do_hsvs=False):
     """
 
     # Mean b0 from dMRI
+    os.makedirs(paths["mat_dir"], exist_ok=True)
     dwi_input = os.path.join(paths["five_dwi"], "dwi_den_unr_pre_unbia.mif")
     b0_temp = os.path.join(paths["five_dwi"], "b0.nii.gz")
     mean_b0 = os.path.join(paths["two_nifti"], "mean_b0.nii.gz")

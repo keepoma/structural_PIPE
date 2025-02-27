@@ -117,7 +117,7 @@ def compute_metrics(G):
     Quantifies how often the node lies on the shortest paths between all other node pairs in the network
     COMPUTATIONALLY INTENSIVE
     """
-    #metrics['betweenness'] = nx.betweenness_centrality(G, weight='weight')
+    metrics['betweenness'] = nx.betweenness_centrality(G, weight='weight')
 
     # Degree assortativity coefficient
     """
@@ -225,7 +225,11 @@ def visualize_matrix(matrix_path, clip):
 def compute_all():
     # Laptop files
     sc_path = "/Users/nikitakaruzin/Desktop/Research/Picht/my_brain/Processed/atlas/hcpmmp1.csv"
-    lookup_txt = "/Users/nikitakaruzin/MRI/projects/BATMAN/DWI/hcpmmp1_ordered.txt"
+    #lookup_txt = "/Users/nikitakaruzin/MRI/projects/BATMAN/DWI/hcpmmp1_ordered.txt"
+
+    # Desktop files
+    sc_path = "/home/nikita/Nikita_MRI/me/atlas/hcpmmp1.csv"
+    lookup_txt = "/home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_ordered.txt"
 
     # Build lookup dictionary for node labels
     lookup = lookup_dictionary(lookup_txt)

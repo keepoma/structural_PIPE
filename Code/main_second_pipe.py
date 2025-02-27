@@ -19,9 +19,9 @@ Example run: python3 main_second_pipe.py --root /home/nikita/Nikita_MRI
 def main():
     args = get_args()
     subject_dirs = get_subject_dirs(args.root)
-    #logs(args.root)
+    logs(args.root)
     # later change hsvs to true to include it, subject dir code is broken atm
-    #preprocessing_pipeline(args.root, args.nthreads, do_hsvs=False)
+    preprocessing_pipeline(args.root, args.nthreads, do_hsvs=False)
     for subj_dir in subject_dirs:
         paths = get_subject_paths(subj_dir)
         subject_id = os.path.basename(subj_dir)
