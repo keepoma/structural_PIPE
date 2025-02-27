@@ -18,6 +18,9 @@ def connectome_generation(paths, nthreads):
     connectome_csv = os.path.join(paths["atlas_dir"], "hcpmmp1.csv")
     assignments_csv = os.path.join(paths["atlas_dir"], "assignments_hcpmmp1.csv")
     sift2_output = os.path.join(paths["tck_dir"], "sift2weights.csv")
+    # Parcels no coreg is experimental
+    parcels_nocoreg = os.path.join(paths["atlas_dir"], "hcpmmp1_parcels_nocoreg.mif")
+
 
     """
     FF: As far as I understand, we dont use -scale_invnodevol nor -scale_invlenght,
@@ -39,7 +42,9 @@ def connectome_generation(paths, nthreads):
         "-nthreads", str(nthreads),
         "-force"
     ])
-    #mrview hcpmmp1_parcels_coreg.mif -connectome.init hcpmmp1_parcels_coreg.mif -connectome.load hcpmmp1.csv
+    """
+    mrview /home/nikita/Nikita_MRI/me/atlas/hcpmmp1_parcels_coreg.mif -connectome.init /home/nikita/Nikita_MRI/me/atlas/hcpmmp1_parcels_coreg.mif -connectome.load /home/nikita/Nikita_MRI/me/atlas/hcpmmp1.csv
+    """
 
     # Representing nodes as cortical meshes
     mesh_obj = os.path.join(paths["atlas_dir"], "hcpmmp1_mesh.obj")
@@ -49,7 +54,6 @@ def connectome_generation(paths, nthreads):
     ])
 
     # Constructing a representation of true edge routes with exemplars
-    # I think Boshra uses the nocoreg parcels, make sure to check this step. Changed back to boshras
     exemplars = os.path.join(paths["tck_dir"], "exemplars.tck")
     run_cmd([
         "connectome2tck", tckgen_output, assignments_csv,

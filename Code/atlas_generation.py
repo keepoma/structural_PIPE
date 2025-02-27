@@ -104,14 +104,15 @@ def freesurfer_atlas_generation(paths, nthreads, subject_id):
     # Run Freesurfer's recon-all using the subject ID
     # use command rm -rf $SUBJECTS_DIR/subject_id if rerunning
     t1_nii = os.path.join(paths["two_nifti"], "t1.nii.gz")
-
-    run_cmd([
+    """
+       run_cmd([
         "recon-all",
         "-s", subject_id,
         "-i", t1_nii,
         "-all",
         "-threads", str(nthreads)
-    ])
+    ]) 
+    """
 
     # Map HCP MMP 1.0 atlas from fsaverage onto the subject
     subjects_dir = os.environ.get("SUBJECTS_DIR", "")
@@ -119,7 +120,7 @@ def freesurfer_atlas_generation(paths, nthreads, subject_id):
     lh_trg = os.path.join(subjects_dir, subject_id, "label", "lh.hcpmmp1.annot")
     rh_src = os.path.join(subjects_dir, "fsaverage", "label", "rh.hcpmmp1.annot")
     rh_trg = os.path.join(subjects_dir, subject_id, "label", "rh.hcpmmp1.annot")
-
+    """
     run_cmd([
         "mri_surf2surf",
         "--srcsubject", "fsaverage",
@@ -137,13 +138,14 @@ def freesurfer_atlas_generation(paths, nthreads, subject_id):
         "--sval-annot", rh_src,
         "--tval", rh_trg
     ])
+    """
 
     # Create atlas outputs in the designated atlas folder
     atlas_dir = paths["atlas_dir"]
     atlas_mgz = os.path.join(atlas_dir, "hcpmmp1.mgz")
     atlas_mif = os.path.join(atlas_dir, "hcpmmp1.mif")
-
-    run_cmd([
+    """
+        run_cmd([
         "mri_aparc2aseg",
         "--old-ribbon",
         "--s", subject_id,
@@ -159,27 +161,34 @@ def freesurfer_atlas_generation(paths, nthreads, subject_id):
         atlas_mif,
         "-force"
     ])
+    """
+
 
     # The labelconvert path will be an issue on non-conda mrtrix installations
     parcels_nocoreg = os.path.join(atlas_dir, "hcpmmp1_parcels_nocoreg.mif")
+    """
     run_cmd([
         "labelconvert",
         atlas_mif,
-        #"/home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_original.txt",
-        "/Users/nikitakaruzin/MRI/projects/BATMAN/Supplementary_Files/hcpmmp1_original.txt",
-        #"/home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_ordered.txt",
-        "/Users/nikitakaruzin/MRI/projects/BATMAN/Supplementary_Files/hcpmmp1_ordered.txt",
+        "/home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_original.txt",
+        #"/Users/nikitakaruzin/MRI/projects/BATMAN/Supplementary_Files/hcpmmp1_original.txt",
+        "/home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_ordered.txt",
+        #"/Users/nikitakaruzin/MRI/projects/BATMAN/Supplementary_Files/hcpmmp1_ordered.txt",
         parcels_nocoreg,
         "-force"
-    ])
+    ])   
+    """
+
 
     # Watchout for errors at this stage, removed "-inverse" flag, implemented struct2diff matrix
     parcels_coreg = os.path.join(atlas_dir, "hcpmmp1_parcels_coreg.mif")
     struct2diff_fsl = os.path.join(paths["mat_dir"], "struct2diff_fsl.mat")
+    # Experimental txt file
+    struct2diff_txt = os.path.join(paths["mat_dir"], "struct2diff_mrtrix.txt")
     run_cmd([
         "mrtransform",
         parcels_nocoreg,  # using the parcels generated above
-        "-linear", struct2diff_fsl,
+        "-linear", struct2diff_txt,
         "-datatype", "uint32",
         parcels_coreg,
         "-force"

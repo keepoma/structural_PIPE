@@ -19,17 +19,20 @@ Example run: python3 main_second_pipe.py --root /home/nikita/Nikita_MRI
 def main():
     args = get_args()
     subject_dirs = get_subject_dirs(args.root)
-    logs(args.root)
-    preprocessing_pipeline(args.root, args.nthreads, do_hsvs=True)
+    #logs(args.root)
+    # later change hsvs to true to include it, subject dir code is broken atm
+    #preprocessing_pipeline(args.root, args.nthreads, do_hsvs=False)
     for subj_dir in subject_dirs:
         paths = get_subject_paths(subj_dir)
         subject_id = os.path.basename(subj_dir)
+        """
         fancy_print("Performing streamline seeding", subj_dir)
         streamline_seeding(paths)
         fancy_print("Generating whole-brain tracks and applying SIFT", subj_dir)
         generate_tracks_and_sift(paths, args.nthreads)
         fancy_print("Generating TDIs and aligning T1", subj_dir)
         generate_tdis(paths, args.nthreads)
+        """
         fancy_print("Generating Freesurfer/HCP-based atlas", subj_dir)
         freesurfer_atlas_generation(paths, args.nthreads, subject_id)
         fancy_print("Generating connectome matrix", subj_dir)
