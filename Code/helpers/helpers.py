@@ -1,6 +1,8 @@
 import os
 import subprocess
 import argparse
+import logging
+from datetime import datetime
 
 
 def run_cmd(cmd):
@@ -97,6 +99,23 @@ def fancy_print(action, subj_dir):
 
     subject_name = os.path.basename(subj_dir)
     print(f"\n========= {action} for Subject: {subject_name} =========\n")
+
+
+def logs(root):
+    # Create the logs folder under args.root
+    log_dir = os.path.join(root, "logs")
+    os.makedirs(log_dir, exist_ok=True)
+
+    # Create a timestamped log filename
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    log_filename = os.path.join(log_dir, f"log_{timestamp}.log")
+
+    # Configure logging to write to the log file
+    logging.basicConfig(
+        filename=log_filename,
+        level=logging.DEBUG,
+        format='%(asctime)s %(levelname)s: %(message)s'
+    )
 
 
 def calculate_tensors_and_dmri_metrics(paths, nthreads):

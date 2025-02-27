@@ -1,5 +1,5 @@
 import os
-import preprocess_MRI_data as preproc
+import preprocessing_functions as preproc
 import statistical_analysis as sa
 from helpers.helpers import (get_subject_paths, get_subject_dirs, ask_yes_no,
                              fancy_print, prompt_for_folder)
@@ -48,11 +48,13 @@ def general_pipeline(root, nthreads):
 
     for subj_dir in subject_dirs:
         paths = get_subject_paths(subj_dir)
-
         if not is_preprocessed:
             fancy_print("Performing FOD and normalization", subj_dir)
             preproc.FOD_normalization_peaks(paths, root, nthreads)
+    print(f"\n========= Preprocessing of all subjects COMPLETE =========\n")
 
+    for subj_dir in subject_dirs:
+        paths = get_subject_paths(subj_dir)
         if not has_registration:
-            fancy_print("Registering T1 to dMRI Space", subj_dir)
+            fancy_print("Registering T1 and 5tt to dMRI Space", subj_dir)
             register_t1_and_5tt_to_dwi(paths, nthreads)

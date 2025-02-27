@@ -1,12 +1,11 @@
 import os
 import logging
-from datetime import datetime
 from helpers.helpers import (get_subject_paths, fancy_print,
                              calculate_tensors_and_dmri_metrics,
-                             get_args, get_subject_dirs)
+                             get_args, get_subject_dirs, logs)
 from tract_segmentation_TractSeg import (tract_and_endings_segmentation_TOMs,
                                          tractography_resample_and_extract_metrics)
-from general_pipeline import general_pipeline
+from preprocessing_pipeline import general_pipeline
 
 
 """
@@ -18,22 +17,7 @@ All the necessary functions are imported from other modules.
 def main():
     args = get_args()
     subject_dirs = get_subject_dirs(args.root)
-
-    # Create the logs folder under args.root
-    log_dir = os.path.join(args.root, "logs")
-    os.makedirs(log_dir, exist_ok=True)
-
-    # Create a timestamped log filename
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    log_filename = os.path.join(log_dir, f"log_{timestamp}.log")
-
-    # Configure logging to write to the log file
-    logging.basicConfig(
-        filename=log_filename,
-        level=logging.DEBUG,
-        format='%(asctime)s %(levelname)s: %(message)s'
-    )
-
+    logs(args.root)
     general_pipeline(args.root, args.nthreads)
     for subj_dir in subject_dirs:
         paths = get_subject_paths(subj_dir)
