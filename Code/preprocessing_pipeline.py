@@ -30,10 +30,8 @@ def preprocessing_pipeline(root, nthreads, do_hsvs):
     for subj_dir in subject_dirs:
         # Retrieve standard paths
         paths = get_subject_paths(subj_dir)
-        fancy_print("Executing script for Subject:", subj_dir)
 
         if not is_preprocessed:
-            fancy_print("Preprocessing", subj_dir)
             fancy_print("Converting Scans", subj_dir)
             preproc.convert_scans(paths, nthreads, t1_folder, t2_folder, t2_df_folder, dwi_ap_folder, dwi_pa_folder)
             fancy_print("Preprocessing dMRI Data", subj_dir)
