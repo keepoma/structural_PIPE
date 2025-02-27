@@ -1,5 +1,5 @@
 import os
-from helpers.helpers import run_cmd
+from helpers.helpers import run_cmd, get_subject_paths
 
 
 """
@@ -99,4 +99,9 @@ def generate_tdis(paths, nthreads):
         f"mrcalc - $(cat {mu_file}) -mult {tdi_t1_output} -force"
     )
     run_cmd(["bash", "-c", cmd])
+
+
+if __name__ == '__main__':
+    paths = get_subject_paths("/Users/nikitakaruzin/Desktop/Research/Picht/my_brain/me")
+    generate_tracks_and_sift(paths, 4)
 

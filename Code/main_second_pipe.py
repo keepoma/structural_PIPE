@@ -25,14 +25,12 @@ def main():
     for subj_dir in subject_dirs:
         paths = get_subject_paths(subj_dir)
         subject_id = os.path.basename(subj_dir)
-        """
         fancy_print("Performing streamline seeding", subj_dir)
         streamline_seeding(paths)
         fancy_print("Generating whole-brain tracks and applying SIFT", subj_dir)
         generate_tracks_and_sift(paths, args.nthreads)
         fancy_print("Generating TDIs and aligning T1", subj_dir)
         generate_tdis(paths, args.nthreads)
-        """
         fancy_print("Generating Freesurfer/HCP-based atlas", subj_dir)
         freesurfer_atlas_generation(paths, args.nthreads, subject_id)
         fancy_print("Generating connectome matrix", subj_dir)

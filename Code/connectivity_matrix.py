@@ -1,4 +1,5 @@
 import numpy as np
+import os
 import matplotlib.pyplot as plt
 import networkx as nx
 from networkx.algorithms.community import girvan_newman
@@ -82,6 +83,9 @@ def compute_metrics(G):
     It's the average inverse shortest path length in the network.
     A higher global efficiency indicates that, on average any node can 
     reach any other node through relatively few edges
+    This allows us to estimate INTEGRATION
+    "integration refers to the ability to quickly combine information from distant brain regions, and segregation refers
+     to the ability for specialized processing to occur within dense regions" 
     """
     metrics['global_efficiency'] = nx.global_efficiency(G)
 
@@ -97,11 +101,8 @@ def compute_metrics(G):
         G_cc = G.subgraph(largest_cc)
         metrics['avg_path_length'] = nx.average_shortest_path_length(G_cc, weight='weight')
 
-    # Betweenness centrality
-    """
-    Quantifies how often the node lies on the shortest paths between all other node pairs in the network
-    """
-    metrics['betweenness'] = nx.betweenness_centrality(G, weight='weight')
+    # Degree centrality
+    metrics['degree_centrality'] = nx.degree_centrality(G)
 
     # Eigenvector centrality
     """
@@ -110,6 +111,13 @@ def compute_metrics(G):
     eigenvector centrality also weights who those neighbors are
     """
     metrics['eigenvector'] = nx.eigenvector_centrality_numpy(G, weight='weight')
+
+    # Betweenness centrality
+    """
+    Quantifies how often the node lies on the shortest paths between all other node pairs in the network
+    COMPUTATIONALLY INTENSIVE
+    """
+    #metrics['betweenness'] = nx.betweenness_centrality(G, weight='weight')
 
     # Degree assortativity coefficient
     """
@@ -144,13 +152,20 @@ def print_top_nodes(metrics, lookup, top_n=5):
     Print the top nodes sorted by weighted degree, betweenness, and eigenvector centrality
     """
 
+    centrality = metrics.get('degree_centrality', {})
     node_strength = metrics.get('node_strength', {})
     betweenness = metrics.get('betweenness', {})
     eigenvector = metrics.get('eigenvector', {})
 
+    sorted_centrality = sorted(centrality.items(), key=lambda x: x[1], reverse=True)
     sorted_strength = sorted(node_strength.items(), key=lambda x: x[1], reverse=True)
     sorted_betweenness = sorted(betweenness.items(), key=lambda x: x[1], reverse=True)
     sorted_eigenvector = sorted(eigenvector.items(), key=lambda x: x[1], reverse=True)
+
+    print("\nTop {} nodes by degree centrality:".format(top_n))
+    for node, value in sorted_centrality[:top_n]:
+        label = lookup.get(node, f"Node_{node}")
+        print(f"{label} (ID: {node + 1}): {value}")
 
     print("\nTop {} nodes by weighted degree (node strength):".format(top_n))
     for node, value in sorted_strength[:top_n]:
@@ -193,26 +208,26 @@ def visualize_graph(G, lookup):
     plt.show()
 
 
-def fa_matrix():
-    # Load the connectome matrix
-    matrix = np.loadtxt('/home/nikita/Nikita_MRI/me/connectome/connectome_fa.csv',
-                        delimiter=',')
-
-    # Plot the heatmap
+def visualize_matrix(matrix_path, clip):
+    matrix = np.loadtxt(matrix_path, delimiter=",")
+    title = os.path.splitext(os.path.basename(matrix_path))[0]
+    if clip:
+        upper_bound = np.percentile(matrix, 99)
+        matrix = np.clip(matrix, None, upper_bound)
     plt.figure(figsize=(10, 8))
     sns.heatmap(matrix, cmap='viridis', square=True)
-    plt.title('FA-weighted Connectome Matrix')
+    plt.title(title)
     plt.xlabel('Region Index')
     plt.ylabel('Region Index')
     plt.show()
 
 
-def main():
-    # Paths to your data files.
-    sc_path = "/Users/nikitakaruzin/MRI/projects/BATMAN/DWI/hcpmmp1.csv"
+def compute_all():
+    # Laptop files
+    sc_path = "/Users/nikitakaruzin/Desktop/Research/Picht/my_brain/Processed/atlas/hcpmmp1.csv"
     lookup_txt = "/Users/nikitakaruzin/MRI/projects/BATMAN/DWI/hcpmmp1_ordered.txt"
 
-    # Build lookup dictionary for node labels.
+    # Build lookup dictionary for node labels
     lookup = lookup_dictionary(lookup_txt)
 
     # Load connectivity matrix and create graph.
@@ -228,15 +243,30 @@ def main():
     print("Average shortest path length:", metrics['avg_path_length'])
     print("Degree assortativity coefficient:", metrics['assortativity'])
     print("Modularity (Girvan-Newman partition):", metrics['modularity'])
-    print("Number of communities detected:", len(metrics['communities']))
+    print("Number of communities detected:", len(metrics['communities']), "\n")
 
     # Print top nodes for several metrics.
     print_top_nodes(metrics, lookup, top_n=5)
 
-    # Visualize the graph with labels.
-    #visualize_graph(G, lookup)
+
+def random():
+    # matrix on desktop
+    #matrix = np.loadtxt('/home/nikita/Nikita_MRI/me/connectome/connectome_fa.csv', delimiter=',')
+
+    connectome_dir = "/Users/nikitakaruzin/Desktop/Research/Picht/my_brain/Processed/connectome"
+    for filename in os.listdir(connectome_dir):
+        full_path = os.path.join(connectome_dir, filename)
+        if full_path == "/Users/nikitakaruzin/Desktop/Research/Picht/my_brain/Processed/atlas/hcpmmp1.csv":
+            visualize_matrix(full_path, clip=True)
+        else:
+            visualize_matrix(full_path, clip=False)
+
+
+def main():
+    compute_all()
+    #random()
 
 
 if __name__ == "__main__":
-    #main()
-    fa_matrix()
+    main()
+
