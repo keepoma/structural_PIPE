@@ -12,7 +12,7 @@ for both pipes. It's supposed to be imported and built upon.
 """
 
 
-def general_pipeline(root, nthreads):
+def preprocessing_pipeline(root, nthreads, do_hsvs):
     subject_dirs = get_subject_dirs(root)
 
     is_preprocessed = ask_yes_no("Is every subject in this folder preprocessed?")
@@ -57,4 +57,4 @@ def general_pipeline(root, nthreads):
         paths = get_subject_paths(subj_dir)
         if not has_registration:
             fancy_print("Registering T1 and 5tt to dMRI Space", subj_dir)
-            register_t1_and_5tt_to_dwi(paths, nthreads)
+            register_t1_and_5tt_to_dwi(paths, nthreads, do_hsvs)

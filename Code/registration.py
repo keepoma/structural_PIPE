@@ -2,7 +2,7 @@ import os
 from helpers.helpers import run_cmd
 
 
-def register_t1_and_5tt_to_dwi(paths, nthreads):
+def register_t1_and_5tt_to_dwi(paths, nthreads, do_hsvs=False):
     """
     Generates structural to diffusion transformation matrix
     Registers T1 to diffusion space
@@ -42,14 +42,15 @@ def register_t1_and_5tt_to_dwi(paths, nthreads):
     ])
 
     # 5tt T1 hsvs
-    subjects_dir = os.environ.get("SUBJECTS_DIR", "")
-    fivett_nocoreg_hsvs_mif = os.path.join(paths["two_nifti"], "5tt_nocoreg_hsvs.mif")
-    run_cmd([
-        "5ttgen", "hsvs", subjects_dir,
-        fivett_nocoreg_hsvs_mif,
-        "-template", t1_mif,
-        "-nocrop"
-    ])
+    if do_hsvs:
+        subjects_dir = os.environ.get("SUBJECTS_DIR", "")
+        fivett_nocoreg_hsvs_mif = os.path.join(paths["two_nifti"], "5tt_nocoreg_hsvs.mif")
+        run_cmd([
+            "5ttgen", "hsvs", subjects_dir,
+            fivett_nocoreg_hsvs_mif,
+            "-template", t1_mif,
+            "-nocrop"
+        ])
 
     fivett_nocoreg_nii = os.path.join(paths["two_nifti"], "5tt_nocoreg.nii.gz")
     run_cmd([

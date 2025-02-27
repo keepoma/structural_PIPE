@@ -7,7 +7,7 @@ from helpers.helpers import (get_subject_paths, fancy_print,
 from atlas_generation import freesurfer_atlas_generation
 from tractography_and_TDIs import streamline_seeding, generate_tracks_and_sift, generate_tdis
 from connectome import connectome_generation, generate_weighted_connectome_matrices
-from preprocessing_pipeline import general_pipeline
+from preprocessing_pipeline import preprocessing_pipeline
 
 
 """
@@ -20,7 +20,7 @@ def main():
     args = get_args()
     subject_dirs = get_subject_dirs(args.root)
     logs(args.root)
-    general_pipeline(args.root, args.nthreads)
+    preprocessing_pipeline(args.root, args.nthreads, do_hsvs=True)
     for subj_dir in subject_dirs:
         paths = get_subject_paths(subj_dir)
         subject_id = os.path.basename(subj_dir)
