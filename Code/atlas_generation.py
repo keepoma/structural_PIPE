@@ -1,5 +1,5 @@
 import os
-from helpers.helpers import run_cmd
+from helpers.helpers import run_cmd, get_subject_paths
 
 
 """
@@ -10,7 +10,7 @@ Currently based on:
 """
 
 
-def nextbrain_atlas_generation(paths, nthreads, subject_id):
+def nextbrain_atlas_generation(paths, nthreads):
     """
     Generate the NextBrain atlas and prepare label conversion outputs.
 
@@ -29,7 +29,8 @@ def nextbrain_atlas_generation(paths, nthreads, subject_id):
     """
 
     os.makedirs(paths["atlas_dir"], exist_ok=True)
-    t1_nii = os.path.join(paths["two_nifti"], "t1.nii.gz")
+    subjects_dir = os.environ.get("SUBJECTS_DIR", "")
+    orig_mgz = os.path.join(subjects_dir, "me", "mri", "orig.mgz")
 
 
     """
@@ -39,9 +40,10 @@ def nextbrain_atlas_generation(paths, nthreads, subject_id):
     # mri_histo_atlas_segment_fast $SUBJECTS_DIR/bert/mri/orig.mgz /path/to/output/bert_histo_atlas_segmentation/ 1 8
     """
     run_cmd([
-        "mri_histo_atlas_segment_fast",
-        t1_nii, os.path.join(paths["atlas_dir"], "t1.nii.gz"),
-        "1", str(nthreads)
+        "mri_histo_atlas_segment",
+        orig_mgz, os.path.join(paths["atlas_dir"], "nextbrain_segmentation"),
+        "simplified",
+        "1", str(nthreads), "-force"
     ])
 
     # Merge left/right hemisphere segmentations
@@ -190,8 +192,9 @@ def freesurfer_atlas_generation(paths, nthreads, subject_id):
         "-force"
     ])
 
-
-
+if __name__ == '__main__':
+    paths = get_subject_paths("/home/nikita/Nikita_MRI/me")
+    nextbrain_atlas_generation(paths, 102, )
 
 
 
