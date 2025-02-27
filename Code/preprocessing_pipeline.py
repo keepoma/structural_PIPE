@@ -58,3 +58,4 @@ def preprocessing_pipeline(root, nthreads, do_hsvs):
         if not has_registration:
             fancy_print("Registering T1 and 5tt to dMRI Space", subj_dir)
             register_t1_and_5tt_to_dwi(paths, nthreads, do_hsvs)
+    print(f"\n========= Transformation matrix and registration of T1 and 5tt to DWI for all subjects COMPLETE =========\n")
