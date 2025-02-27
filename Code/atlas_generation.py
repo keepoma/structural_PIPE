@@ -31,6 +31,7 @@ def nextbrain_atlas_generation(paths, nthreads):
     os.makedirs(paths["atlas_dir"], exist_ok=True)
     subjects_dir = os.environ.get("SUBJECTS_DIR", "")
     orig_mgz = os.path.join(subjects_dir, "me", "mri", "orig.mgz")
+    orig_mgz = "/home/nikita/freesurfer/subjects/me/mri/orig.mgz"
 
 
     """
@@ -43,7 +44,7 @@ def nextbrain_atlas_generation(paths, nthreads):
         "mri_histo_atlas_segment",
         orig_mgz, os.path.join(paths["atlas_dir"], "nextbrain_segmentation"),
         "simplified",
-        "1", str(nthreads), "-force"
+        "1", str(nthreads)
     ])
 
     # Merge left/right hemisphere segmentations
