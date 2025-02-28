@@ -48,18 +48,26 @@ def nextbrain_atlas_generation(paths, nthreads):
         "1", str(nthreads)
     ])
     """
+    
+    """
+    mri_convert -rl /home/nikita/Nikita_MRI/me/atlas/nextbrain_segmentation/seg_left.mgz \
+            /home/nikita/Nikita_MRI/me/atlas/nextbrain_segmentation/seg_right.mgz \
+            /home/nikita/Nikita_MRI/me/atlas/nextbrain_segmentation/seg_right_resampled.mgz
 
+    """
 
     # Merge left/right hemisphere segmentations
     left_seg = os.path.join(paths["atlas_dir"], "nextbrain_segmentation", "seg_left.mgz")
-    right_seg = os.path.join(paths["atlas_dir"], "nextbrain_segmentation", "seg_right.mgz")
+    right_seg_res = os.path.join(paths["atlas_dir"], "nextbrain_segmentation", "seg_right_resampled.mgz")
     combined_seg = os.path.join(paths["atlas_dir"], "nextbrain_segmentation", "seg.mgz")
+    """
     run_cmd([
         "mri_concat",
         "--o", combined_seg,
         left_seg,
-        right_seg
-    ])
+        right_seg_res
+    ])   
+    """
 
     # Convert combined segmentation to .mif
     combined_seg_mif = os.path.join(paths["atlas_dir"], "nextbrain_seg.mif")
@@ -68,35 +76,37 @@ def nextbrain_atlas_generation(paths, nthreads):
         "-datatype", "uint32",
         combined_seg,
         combined_seg_mif,
-        "-threads", str(nthreads),
         "-force"
     ])
+    
+    """
+    mrmath /home/nikita/Nikita_MRI/me/atlas/nextbrain_seg.mif -axis 3 max /home/nikita/Nikita_MRI/me/atlas/nextbrain_seg_3D.mif
+    """
 
     # Perform label conversion using the NextBrain lookup table
     # Here  assume that NextBrain outputs a file 'lut.txt' in the atlas directory.
     # If NextBrain does not provide separate original/ordered LUTs, we use the same file for both.
-    lut_file = os.path.join(paths["atlas_dir"], "lut.txt")
-    parcels_nocoreg = os.path.join(paths["atlas_dir"], "nextbrain_parcels_nocoreg.mif")
+    lut_file = os.path.join(paths["atlas_dir"], "nextbrain_segmentation", "lookup_table.txt")
+    parcels_nocoreg = os.path.join(paths["atlas_dir"], "nextbrain_segmentation", "nextbrain_parcels_nocoreg.mif")
+    combined_seg_mif_3d = os.path.join(paths["atlas_dir"], "nextbrain_seg_3D.mif")
     run_cmd([
         "labelconvert",
-        combined_seg_mif,
+        combined_seg_mif_3d,
         lut_file,  # source LUT
         lut_file,  # target LUT (assumed to be the same)
         parcels_nocoreg,
-        "-threads", str(nthreads),
         "-force"
     ])
 
     # Coregister the parcels to diffusion space
-    struct2diff = os.path.join(paths["mat_dir"], "struct2diff.mat")
-    parcels_coreg = os.path.join(paths["atlas_dir"], "nextbrain_parcels_coreg.mif")
+    struct2diff_txt = os.path.join(paths["mat_dir"], "struct2diff_mrtrix.txt")
+    parcels_coreg = os.path.join(paths["atlas_dir"], "nextbrain_segmentation", "nextbrain_parcels_coreg.mif")
     run_cmd([
         "mrtransform",
         parcels_nocoreg,
-        "-linear", struct2diff,
+        "-linear", struct2diff_txt,
         "-datatype", "uint32",
         parcels_coreg,
-        "-threads", str(nthreads),
         "-force"
     ])
 
@@ -198,7 +208,36 @@ def freesurfer_atlas_generation(paths, nthreads, subject_id):
 
 if __name__ == '__main__':
     paths = get_subject_paths("/home/nikita/Nikita_MRI/me")
-    nextbrain_atlas_generation(paths, 50)
+    #nextbrain_atlas_generation(paths, 50)
+    tckgen_output = os.path.join(paths["tck_dir"], "tracks_10mio.tck")
+    parcels_coreg = "/home/nikita/Nikita_MRI/me/atlas/nextbrain_segmentation/nextbrain_parcels_coreg.mif"
+    connectome_csv = os.path.join(paths["atlas_dir"], "nextbrain_segmentation", "nextbrain_connectome.csv")
+    assignments_csv = os.path.join(paths["atlas_dir"], "nextbrain_segmentation", "assignments_nextbrain.csv")
+    sift2_output = os.path.join(paths["tck_dir"], "sift2weights.csv")
+    # Parcels no coreg is experimental
+    parcels_nocoreg = os.path.join(paths["atlas_dir"], "hcpmmp1_parcels_nocoreg.mif")
+
+
+    """
+    FF: As far as I understand, we dont use -scale_invnodevol nor -scale_invlenght,
+    because f.e. -scale_invnodevol tells tck2connectome to scale each connection by 
+    the inverse of the parcel volume, but we don't need that because we have the
+    external streamline weights from SIFT2 now
+    Are these combinable? 
+    """
+    # It would be interesting to consider scaling by parcel volume or connection length with
+    # -scale_invnodevol or -scale_invlength, respectively
+    run_cmd([
+        "tck2connectome",
+        "-tck_weights_in", sift2_output,
+        tckgen_output,
+        parcels_coreg,
+        connectome_csv,
+        "-out_assignment", assignments_csv,
+        "-symmetric", "-zero_diagonal",
+        "-nthreads", str(102),
+        "-force"
+    ])
 
 
 

@@ -79,11 +79,11 @@ def tractography_resample_and_extract_metrics(subj_dir, nthreads):
         peaks_dir = os.path.join(subj_dir, "along_tract", "peaks")
         os.makedirs(peaks_dir, exist_ok=True)
         adc_csv = os.path.join(adc_dir, f"{tract_name}_adc.csv")
-        adc_n100_csv = os.path.join(adc_dir, f"{tract_name}_adc.csv")
+        adc_n100_csv = os.path.join(adc_dir, f"{tract_name}_n100_adc.csv")
         fa_csv = os.path.join(fa_dir, f"{tract_name}_fa.csv")
-        fa_n100_csv = os.path.join(fa_dir, f"{tract_name}_fa.csv")
+        fa_n100_csv = os.path.join(fa_dir, f"{tract_name}_n100_fa.csv")
         peaks_txt = os.path.join(peaks_dir, f"{tract_name}_peaks.txt")
-        peaks_n100_txt = os.path.join(peaks_dir, f"{tract_name}_peaks.txt")
+        peaks_n100_txt = os.path.join(peaks_dir, f"{tract_name}_n100_peaks.txt")
 
         # Track generation using tckgen
         # Changed cutoff to 0.1 and implemented -seed_unidirectional
