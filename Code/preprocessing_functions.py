@@ -15,10 +15,11 @@ def convert_scans(paths, nthreads, t1_folder, t2_folder, t2_df_folder, dwi_ap_fo
     # Helper lambda for paths from the one_raw directory
     one_path = lambda subpath: os.path.join(paths["one_raw"], subpath)
 
-    # Convert T1 scan
     os.makedirs(paths["two_nifti"], exist_ok=True)
     t1_nii = os.path.join(paths["two_nifti"], "t1.nii.gz")
     t1_mif = os.path.join(paths["two_nifti"], "t1.mif")
+
+    # Convert T1 scan
     run_cmd([
         "mrconvert", "-nthreads", str(nthreads),
         "-strides", "1,2,3",
@@ -40,6 +41,7 @@ def convert_scans(paths, nthreads, t1_folder, t2_folder, t2_df_folder, dwi_ap_fo
         one_path(t2_folder), os.path.join(paths["two_nifti"], "t2.nii.gz"),
         "-force"
     ])
+
     # Convert dark-fluid T2 scan
     run_cmd([
         "mrconvert", "-nthreads", str(nthreads),
@@ -48,6 +50,7 @@ def convert_scans(paths, nthreads, t1_folder, t2_folder, t2_df_folder, dwi_ap_fo
         os.path.join(paths["two_nifti"], "t2_df.nii.gz"),
         "-force"
     ])
+
     # Convert dMRI AP scan
     os.makedirs(paths["five_dwi"], exist_ok=True)
     run_cmd([
@@ -56,6 +59,7 @@ def convert_scans(paths, nthreads, t1_folder, t2_folder, t2_df_folder, dwi_ap_fo
         one_path(dwi_ap_folder), os.path.join(paths["five_dwi"], "dwi_ap.mif"),
         "-force"
     ])
+
     # Convert dMRI PA scan
     run_cmd([
         "mrconvert", "-nthreads", str(nthreads),
@@ -220,7 +224,7 @@ def FOD_normalization_peaks(paths, root, nthreads):
         "-force"
     ])
 
-    # Generate peaks
+    # Generate peaks on individual and group RF
     peaks_path_individual_RF = os.path.join(paths["two_nifti"], "fod_peaks_individual_RF.nii.gz")
     peaks_path_group_RF = os.path.join(paths["two_nifti"], "fod_peaks_group_RF.nii.gz")
 

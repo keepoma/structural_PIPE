@@ -19,7 +19,6 @@ def preprocessing_pipeline(root, nthreads, do_hsvs):
     has_registration = ask_yes_no("Has the registration of T1 and 5tt to dwi been done?")
 
     if not is_preprocessed:
-        # Pending to save these to config file or something in case of script re-run
         print("Please provide the following folder names: ")
         t1_folder = prompt_for_folder("006_T1w_MPR", "T1 scan")
         t2_folder = prompt_for_folder("008_T2w_SPC", "T2 scan")

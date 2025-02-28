@@ -5,7 +5,7 @@ from helpers.helpers import run_cmd
 def register_t1_and_5tt_to_dwi(paths, nthreads, do_hsvs=False):
     """
     Generates structural to diffusion transformation matrix
-    Registers T1 to diffusion space
+    Registers T1 and 5tt to diffusion space
     """
 
     # Mean b0 from dMRI
