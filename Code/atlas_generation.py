@@ -50,9 +50,15 @@ def nextbrain_atlas_generation(paths, nthreads):
     """
     
     """
-    mri_convert -rl /home/nikita/Nikita_MRI/me/atlas/nextbrain_segmentation/seg_left.mgz \
-            /home/nikita/Nikita_MRI/me/atlas/nextbrain_segmentation/seg_right.mgz \
-            /home/nikita/Nikita_MRI/me/atlas/nextbrain_segmentation/seg_right_resampled.mgz
+    mri_convert \
+  -rl /home/nikita/freesurfer/subjects/me/mri/orig.mgz \
+  /home/nikita/Nikita_MRI/me/atlas/nextbrain_segmentation/seg_left.mgz \
+  /home/nikita/Nikita_MRI/me/atlas/nextbrain_segmentation/seg_left_in_orig.mgz
+  
+    mri_convert \
+  -rl /home/nikita/freesurfer/subjects/me/mri/orig.mgz \
+  /home/nikita/Nikita_MRI/me/atlas/nextbrain_segmentation/seg_right.mgz \
+  /home/nikita/Nikita_MRI/me/atlas/nextbrain_segmentation/seg_right_in_orig.mgz  
 
     """
 
@@ -60,6 +66,14 @@ def nextbrain_atlas_generation(paths, nthreads):
     left_seg = os.path.join(paths["atlas_dir"], "nextbrain_segmentation", "seg_left.mgz")
     right_seg_res = os.path.join(paths["atlas_dir"], "nextbrain_segmentation", "seg_right_resampled.mgz")
     combined_seg = os.path.join(paths["atlas_dir"], "nextbrain_segmentation", "seg.mgz")
+
+    """
+    mri_concat \
+  --i /home/nikita/Nikita_MRI/me/atlas/nextbrain_segmentation/seg_left_in_orig.mgz \
+  --i /home/nikita/Nikita_MRI/me/atlas/nextbrain_segmentation/seg_right_in_orig.mgz \
+  --o /home/nikita/Nikita_MRI/me/atlas/nextbrain_segmentation/seg.mgz \
+  --max
+    """
     """
     run_cmd([
         "mri_concat",
@@ -91,7 +105,7 @@ def nextbrain_atlas_generation(paths, nthreads):
     combined_seg_mif_3d = os.path.join(paths["atlas_dir"], "nextbrain_seg_3D.mif")
     run_cmd([
         "labelconvert",
-        combined_seg_mif_3d,
+        combined_seg_mif,
         lut_file,  # source LUT
         lut_file,  # target LUT (assumed to be the same)
         parcels_nocoreg,
@@ -208,15 +222,13 @@ def freesurfer_atlas_generation(paths, nthreads, subject_id):
 
 if __name__ == '__main__':
     paths = get_subject_paths("/home/nikita/Nikita_MRI/me")
-    #nextbrain_atlas_generation(paths, 50)
+    nextbrain_atlas_generation(paths, 50)
     tckgen_output = os.path.join(paths["tck_dir"], "tracks_10mio.tck")
     parcels_coreg = "/home/nikita/Nikita_MRI/me/atlas/nextbrain_segmentation/nextbrain_parcels_coreg.mif"
     connectome_csv = os.path.join(paths["atlas_dir"], "nextbrain_segmentation", "nextbrain_connectome.csv")
     assignments_csv = os.path.join(paths["atlas_dir"], "nextbrain_segmentation", "assignments_nextbrain.csv")
     sift2_output = os.path.join(paths["tck_dir"], "sift2weights.csv")
-    # Parcels no coreg is experimental
-    parcels_nocoreg = os.path.join(paths["atlas_dir"], "hcpmmp1_parcels_nocoreg.mif")
-
+    #
 
     """
     FF: As far as I understand, we dont use -scale_invnodevol nor -scale_invlenght,
