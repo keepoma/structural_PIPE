@@ -148,6 +148,7 @@ def create_tractseg_file(root, tractometry_path, bundles, plot3d, output_file, g
         f.write("\n".join(subject_lines) + "\n")
 
     print(f"Subjects file created: {output_file}")
+    return output_file
 
 
 if __name__ == '__main__':

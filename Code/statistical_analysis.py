@@ -2,11 +2,9 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-#from statsmodels.stats.multitest import multipletests
+from statsmodels.stats.multitest import multipletests
 from scipy import stats
-from helpers.helpers import run_cmd, get_subject_paths, get_subject_dirs, get_args
-
-
+from helpers.helpers import run_cmd, get_subject_paths, get_subject_dirs, create_tractseg_file
 
 
 def compute_group_response_functions(root, output_dir, nthreads):
@@ -205,11 +203,35 @@ def visualize_peak_length(peaks_txt):
     plt.show()
 
 
+def plot_tractometry_results(root, bundles="AF_left AF_right CC_5 CC_6 SCP_left"):
+    """
+    This functions first creates the necessary TractSeg file with tractometry path, bundles to use
+    and a 3D plot option. Also writes the necessary subject info.
+    It then creates a png with the txt options.
+    """
 
+    tractseg_tractometry_dir = os.path.join(root, "group_analysis", "tractseg_tractometry")
+    subject_txt_output = os.path.join(tractseg_tractometry_dir, "subjects.txt")
+    subjects_txt = create_tractseg_file(
+        root,
+        tractometry_path=f"{tractseg_tractometry_dir}/SUBJECT_ID/Tractometry.csv",
+        bundles=bundles,
+        plot3d=tractseg_tractometry_dir,
+        output_file=subject_txt_output)
+
+    tractometry_png = os.path.join(root, "group_analysis", "tractseg_tractometry", "tractometry_result.png")
+    run_cmd([
+        "plot_tractometry_results",
+        "-i", subjects_txt,
+        "-o", tractometry_png,
+        "--mc"
+    ])
 
 
 if __name__ == "__main__":
-    visualize_fa("/media/nas/nikita/test_study2_1sub/test_302/along_tract/FA/AF_left_n100_fa.csv")
+    plot_tractometry_results("/media/nas/nikita/test_study2_1sub")
+
+    #visualize_fa("/media/nas/nikita/test_study2_1sub/test_302/along_tract/FA/AF_left_n100_fa.csv")
     #visualize_fa("/media/nas/nikita/test_study2_1sub/test_302/along_tract/CST_left_fa.csv")
     #visualize_fa("/media/nas/nikita/test_study2_1sub/test_302/along_tract/AF_right_fa.csv")
     #visualize_peak_length("/media/nas/nikita/test_study2_1sub/test_302/along_tract/CST_left_peaks.txt")

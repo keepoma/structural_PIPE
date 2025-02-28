@@ -171,7 +171,7 @@ def tractography_resample_and_extract_metrics(subj_dir, nthreads):
         ])
 
 
-def tractseg_tracking_and_tractometry(paths, subj_dir):
+def tractseg_tracking_and_tractometry(root, paths, subj_dir):
     """
     Implementing tractsegts own Tractometry as an alternative/conjunction to iFOD2
     """
@@ -188,10 +188,13 @@ def tractseg_tracking_and_tractometry(paths, subj_dir):
         "--nr_fibers", "5000"
     ])
 
-
     subject_id = os.path.basename(subj_dir)
+    tractseg_tractometry_dir = os.path.join(root, "group_analysis", "tractseg_tractometry")
+    os.makedirs(tractseg_tractometry_dir, exist_ok=True)
+    subj_tractseg_tractometry_dir = os.path.join(tractseg_tractometry_dir, subject_id)
+    os.makedirs(subj_tractseg_tractometry_dir, exist_ok=True)
     tom_trackings = os.path.join(tractseg_output, "TOM_trackings")
-    tractseg_tractometry_output = os.path.join(tractseg_output, f"tractometry_{subject_id}.csv")
+    tractseg_tractometry_output = os.path.join(subj_tractseg_tractometry_dir, f"Tractometry.csv")
     bundle_e_path = os.path.join(subj_dir, "tractseg_output", "endings_segmentations")
     fa_output_nii = os.path.join(paths["five_dwi"], "fa.nii.gz")
 

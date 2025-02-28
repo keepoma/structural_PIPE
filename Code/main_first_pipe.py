@@ -28,7 +28,7 @@ def main():
         fancy_print("iFOD2 Track generation, resampling and calculating metrics", subj_dir)
         #tractography_resample_and_extract_metrics(subj_dir, args.nthreads)
         fancy_print("TractSeg tracking and tractometry", subj_dir)
-        tractseg_tracking_and_tractometry(paths, subj_dir)
+        tractseg_tracking_and_tractometry(args.root, paths, subj_dir)
         print(f"\n========= Subject: {os.path.basename(subj_dir)} COMPLETE =========\n")
 
     print(f"\n========= PROCESSING COMPLETE FOR ALL SUBJECTS =========\n")
