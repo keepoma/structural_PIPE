@@ -60,9 +60,9 @@ def get_args():
     parser.add_argument(
         "--nthreads",
         type=int,
-        default=max(4, os.cpu_count() - 10),
+        default=max(4, os.cpu_count() - 50),
         help=("Number of threads to pass to MRtrix commands. Will attempt to use "
-              "max available threads - 10, if not possible attempts 4.")
+              "max available threads - 50, if not possible attempts 4.")
     )
     return parser.parse_args()
 
