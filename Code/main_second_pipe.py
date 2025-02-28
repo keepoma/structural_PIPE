@@ -34,8 +34,6 @@ def main():
         freesurfer_atlas_generation(paths, args.nthreads, subject_id)
         fancy_print("Generating connectome matrix", subj_dir)
         connectome_generation(paths, args.nthreads)
-        fancy_print("Calculating Tensor and related metrics", subj_dir)
-        calculate_tensors_and_dmri_metrics(paths, args.nthreads)
         fancy_print("Generating connectome weighting by metrics", subj_dir)
         generate_weighted_connectome_matrices(paths, args.nthreads)
 

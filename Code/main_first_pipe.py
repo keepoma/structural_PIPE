@@ -23,8 +23,6 @@ def main():
         paths = get_subject_paths(subj_dir)
         fancy_print("Running tractography", subj_dir)
         tract_and_endings_segmentation_TOMs(paths, subj_dir)
-        fancy_print("Generating Tensor and Scalar Metrics", subj_dir)
-        calculate_tensors_and_dmri_metrics(paths, args.nthreads)
         fancy_print("Track generation, resampling and metrics generation", subj_dir)
         tractography_resample_and_extract_metrics(subj_dir)
 
