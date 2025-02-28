@@ -8,6 +8,7 @@ This code is also able to run as a standalone if the preprocessing part is
 to be skipped
 """
 
+
 def tract_and_endings_segmentation_TOMs(paths, subject_dir):
     """
     Runs tract segmentation, endings segmentation, and generates tract orientation maps.
@@ -41,10 +42,10 @@ def tract_and_endings_segmentation_TOMs(paths, subject_dir):
         "--output_type", "TOM"
     ])
 
-def tractography_resample_and_extract_metrics(subj_dir, nthreads=max(4, os.cpu_count() - 10)):
+
+def tractography_resample_and_extract_metrics(subj_dir, nthreads):
     """
     Process a single subject by looping through each tract.
-    This is the only function imported from this module into main_first_pipe
     """
 
     # Build the full path to the tract_name.txt file
@@ -68,16 +69,23 @@ def tractography_resample_and_extract_metrics(subj_dir, nthreads=max(4, os.cpu_c
         tck_path = os.path.join(tracking_dir, f"{tract_name}.tck")
         tck_N100 = os.path.join(tracking_dir, f"{tract_name}_N100.tck")
 
-        # Along-tract output directory
+        # Along-tract output directory with 3 subdirectories for each metric
         along_dir = os.path.join(subj_dir, "along_tract")
         os.makedirs(along_dir, exist_ok=True)
-        adc_csv = os.path.join(along_dir, f"{tract_name}_adc.csv")
-        fa_csv = os.path.join(along_dir, f"{tract_name}_fa.csv")
-        peaks_txt = os.path.join(along_dir, f"{tract_name}_peaks.txt")
+        adc_dir = os.path.join(subj_dir, "along_tract", "ADC")
+        os.makedirs(adc_dir, exist_ok=True)
+        fa_dir = os.path.join(subj_dir, "along_tract", "FA")
+        os.makedirs(fa_dir, exist_ok=True)
+        peaks_dir = os.path.join(subj_dir, "along_tract", "peaks")
+        os.makedirs(peaks_dir, exist_ok=True)
+        adc_csv = os.path.join(adc_dir, f"{tract_name}_adc.csv")
+        adc_n100_csv = os.path.join(adc_dir, f"{tract_name}_adc.csv")
+        fa_csv = os.path.join(fa_dir, f"{tract_name}_fa.csv")
+        fa_n100_csv = os.path.join(fa_dir, f"{tract_name}_fa.csv")
+        peaks_txt = os.path.join(peaks_dir, f"{tract_name}_peaks.txt")
+        peaks_n100_txt = os.path.join(peaks_dir, f"{tract_name}_peaks.txt")
 
-        #c_csv = os.path.join(along_dir, f"{tract_name}_c.csv")
-
-        # 1. Track generation using tckgen
+        # Track generation using tckgen
         run_cmd([
             "tckgen",
             "-algorithm", "iFOD2",
@@ -96,7 +104,7 @@ def tractography_resample_and_extract_metrics(subj_dir, nthreads=max(4, os.cpu_c
             "-force"
         ])
 
-        # 2. Resampling using tckresample
+        # Resampling using tckresample
         run_cmd([
             "tckresample",
             tck_path,
@@ -106,31 +114,56 @@ def tractography_resample_and_extract_metrics(subj_dir, nthreads=max(4, os.cpu_c
             "-force"
         ])
 
-        # 3. Sample ADC values along the tract
+        # Sample ADC values along original and resampled tract
         run_cmd([
             "tcksample",
-            tck_N100,
+            tck_path,
             os.path.join(subj_dir, "raw", "5_dwi", "adc.mif"),
             adc_csv,
             "-force"
         ])
 
-        # 4. Sample FA values along the tract
         run_cmd([
             "tcksample",
             tck_N100,
+            os.path.join(subj_dir, "raw", "5_dwi", "adc.mif"),
+            adc_n100_csv,
+            "-force"
+        ])
+
+        # Sample FA values along the tract
+        run_cmd([
+            "tcksample",
+            tck_path,
             os.path.join(subj_dir, "raw", "5_dwi", "fa.mif"),
             fa_csv,
             "-force"
         ])
 
-        # 5. Peaks along tract
-        paths = get_subject_paths(subj_dir)
-        peaks_path_group_RF = os.path.join(paths["two_nifti"], "fod_peaks_group_RF.nii.gz")
         run_cmd([
             "tcksample",
-            tck_N100, peaks_path_group_RF,
+            tck_N100,
+            os.path.join(subj_dir, "raw", "5_dwi", "fa.mif"),
+            fa_n100_csv,
+            "-force"
+        ])
+
+        # Peaks along tract
+        paths = get_subject_paths(subj_dir)
+        peaks_path_group_RF = os.path.join(paths["two_nifti"], "fod_peaks_group_RF.nii.gz")
+
+        run_cmd([
+            "tcksample",
+            tck_path,
+            peaks_path_group_RF,
             peaks_txt
+        ])
+
+        run_cmd([
+            "tcksample",
+            tck_N100,
+            peaks_path_group_RF,
+            peaks_n100_txt
         ])
 
 

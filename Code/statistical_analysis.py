@@ -608,7 +608,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    #main()
+    visualize_fa("/Users/nikitakaruzin/Desktop/Research/Picht/my_brain/me/along_tract/AF_left_fa.csv")
     #visualize_fa("/media/nas/nikita/test_study2_1sub/test_302/along_tract/CST_left_fa.csv")
     #visualize_fa("/media/nas/nikita/test_study2_1sub/test_302/along_tract/AF_right_fa.csv")
     #visualize_peak_length("/media/nas/nikita/test_study2_1sub/test_302/along_tract/CST_left_peaks.txt")
