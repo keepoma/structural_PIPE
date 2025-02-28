@@ -237,3 +237,70 @@ def FOD_normalization_peaks(paths, root, nthreads):
         peaks_path_group_RF,
         "-force"
     ])
+
+
+def calculate_tensors_and_dmri_metrics(paths, nthreads):
+    """
+    Calculate diffusion tensors and derive dMRI metrics (FA, ADC, AD, RD)
+    from preprocessed DWI data.
+    """
+
+    dwi_image = os.path.join(paths["five_dwi"], "dwi_den_unr_pre_unbia.mif")
+    mask_image = os.path.join(paths["five_dwi"], "mask.mif")
+    tensors_output = os.path.join(paths["five_dwi"], "tensors.mif")
+
+    # Calculate the diffusion tensor from the preprocessed DWI data
+    run_cmd([
+        "dwi2tensor",
+        dwi_image,
+        "-mask", mask_image,
+        tensors_output,
+        "-nthreads", str(nthreads),
+        "-force"
+    ])
+
+    # Define outputs for the diffusion MRI metrics.
+    fa_output = os.path.join(paths["five_dwi"], "fa.mif")
+    adc_output = os.path.join(paths["five_dwi"], "adc.mif")
+    ad_output = os.path.join(paths["five_dwi"], "ad.mif")
+    rd_output = os.path.join(paths["five_dwi"], "rd.mif")
+
+    # Fractional Anisotropy map
+    run_cmd([
+        "tensor2metric",
+        tensors_output,
+        "-mask", mask_image,
+        "-fa", fa_output,
+        "-nthreads", str(nthreads),
+        "-force"
+    ])
+
+    # Apparent Diffusion Coefficient map
+    run_cmd([
+        "tensor2metric",
+        tensors_output,
+        "-mask", mask_image,
+        "-adc", adc_output,
+        "-nthreads", str(nthreads),
+        "-force"
+    ])
+
+    # Calculate the Axial Diffusivity map
+    run_cmd([
+        "tensor2metric",
+        tensors_output,
+        "-mask", mask_image,
+        "-ad", ad_output,
+        "-nthreads", str(nthreads),
+        "-force"
+    ])
+
+    # Calculate the Radial Diffusivity map
+    run_cmd([
+        "tensor2metric",
+        tensors_output,
+        "-mask", mask_image,
+        "-rd", rd_output,
+        "-nthreads", str(nthreads),
+        "-force"
+    ])

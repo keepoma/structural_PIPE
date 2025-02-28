@@ -1,7 +1,6 @@
 import os
 import logging
 from helpers.helpers import (get_subject_paths, fancy_print,
-                             calculate_tensors_and_dmri_metrics,
                              get_args, get_subject_dirs,
                              logs)
 from atlas_generation import freesurfer_atlas_generation

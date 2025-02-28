@@ -36,6 +36,8 @@ def preprocessing_pipeline(root, nthreads, do_hsvs):
             preproc.convert_scans(paths, nthreads, t1_folder, t2_folder, t2_df_folder, dwi_ap_folder, dwi_pa_folder)
             fancy_print("Preprocessing dMRI Data", subj_dir)
             preproc.preprocess_dwi(paths, nthreads)
+            fancy_print("Calculating Tensors and dMRI metrics", subj_dir)
+            preproc.calculate_tensors_and_dmri_metrics(paths, nthreads)
             fancy_print("Calculating Response Function", subj_dir)
             preproc.response_function(paths, nthreads)
 
