@@ -27,7 +27,8 @@ def get_subject_paths(subject_dir):
         "mat_dir": os.path.join(subject_dir, "mat"),
         "tck_dir": os.path.join(subject_dir, "tck"),
         "atlas_dir": os.path.join(subject_dir, "atlas"),
-        "connectome_dir": os.path.join(subject_dir, "connectome")
+        "connectome_dir": os.path.join(subject_dir, "connectome"),
+        "tractseg_dir": os.path.join(subject_dir, "tractseg_output")
     }
     return paths
 
@@ -117,5 +118,45 @@ def logs(root):
         format='%(asctime)s %(levelname)s: %(message)s'
     )
 
+
+def create_tractseg_file(root, tractometry_path, bundles, plot3d, output_file, group=0, age=0.0, sex=0):
+    """
+    Create a subjects file for plot_tractometry_results.
+
+    The second column has to be 'group' (for a group comparison; containing only 0 or 1) or
+    'target' (for a correlation analysis; containing the value you want to calculate the correlation for).
+    """
+
+    # Header lines for the subjects file.
+    header_lines = [
+        f"# tractometry_path={tractometry_path}",
+        f"# bundles={bundles}",
+        f"# plot_3D={plot3d}",
+        "",
+        "subject_id group Age Sex"
+    ]
+
+    # Retrieve subject IDs from directories under subjects_root.
+    subject_dirs = get_subject_dirs(root)
+
+    # Create a line for each subject with default values (group=0, Age=0.0, Sex=0).
+    subject_lines = [f"{os.path.basename(subject)} {group} {age} {sex}" for subject in subject_dirs]
+
+    # Write the header and subject lines to the output file.
+    with open(output_file, "w") as f:
+        f.write("\n".join(header_lines) + "\n")
+        f.write("\n".join(subject_lines) + "\n")
+
+    print(f"Subjects file created: {output_file}")
+
+
+if __name__ == '__main__':
+    create_tractseg_file(
+        root="/media/nas/nikita/test_study2_1sub",
+        tractometry_path="/media/nas/nikita/test_study2_1sub/group_analysis/tractseg_tractometry/SUBJECT_ID/Tractometry.csv",
+        bundles="AF_left AF_right CC_5 CC_6 SCP_left",
+        plot3d="/media/nas/nikita/test_study2_1sub/test_302/tractseg_output",
+        output_file="/media/nas/nikita/test_study2_1sub/group_analysis/tractseg_tractometry/subjects.txt"
+    )
 
 

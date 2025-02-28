@@ -264,19 +264,25 @@ def calculate_tensors_and_dmri_metrics(paths, nthreads):
     ])
 
     # Define outputs for the diffusion MRI metrics.
-    fa_output = os.path.join(paths["five_dwi"], "fa.mif")
-    adc_output = os.path.join(paths["five_dwi"], "adc.mif")
-    ad_output = os.path.join(paths["five_dwi"], "ad.mif")
-    rd_output = os.path.join(paths["five_dwi"], "rd.mif")
+    fa_output_mif = os.path.join(paths["five_dwi"], "fa.mif")
+    fa_output_nii = os.path.join(paths["five_dwi"], "fa.nii.gz")
+    adc_output_mif = os.path.join(paths["five_dwi"], "adc.mif")
+    ad_output_mif = os.path.join(paths["five_dwi"], "ad.mif")
+    rd_output_mif = os.path.join(paths["five_dwi"], "rd.mif")
 
     # Fractional Anisotropy map
     run_cmd([
         "tensor2metric",
         tensors_output,
         "-mask", mask_image,
-        "-fa", fa_output,
+        "-fa", fa_output_mif,
         "-nthreads", str(nthreads),
         "-force"
+    ])
+    run_cmd([
+        "mrconvert",
+        fa_output_mif,
+        fa_output_nii
     ])
 
     # Apparent Diffusion Coefficient map
@@ -284,7 +290,7 @@ def calculate_tensors_and_dmri_metrics(paths, nthreads):
         "tensor2metric",
         tensors_output,
         "-mask", mask_image,
-        "-adc", adc_output,
+        "-adc", adc_output_mif,
         "-nthreads", str(nthreads),
         "-force"
     ])
@@ -294,7 +300,7 @@ def calculate_tensors_and_dmri_metrics(paths, nthreads):
         "tensor2metric",
         tensors_output,
         "-mask", mask_image,
-        "-ad", ad_output,
+        "-ad", ad_output_mif,
         "-nthreads", str(nthreads),
         "-force"
     ])
@@ -304,7 +310,7 @@ def calculate_tensors_and_dmri_metrics(paths, nthreads):
         "tensor2metric",
         tensors_output,
         "-mask", mask_image,
-        "-rd", rd_output,
+        "-rd", rd_output_mif,
         "-nthreads", str(nthreads),
         "-force"
     ])
