@@ -40,17 +40,20 @@ def nextbrain_atlas_generation(paths, nthreads):
     # SynthMorph example: 
     # mri_histo_atlas_segment_fast $SUBJECTS_DIR/bert/mri/orig.mgz /path/to/output/bert_histo_atlas_segmentation/ 1 8
     """
+    """
     run_cmd([
         "mri_histo_atlas_segment",
         orig_mgz, os.path.join(paths["atlas_dir"], "nextbrain_segmentation"),
         "simplified",
         "1", str(nthreads)
     ])
+    """
+
 
     # Merge left/right hemisphere segmentations
-    left_seg = os.path.join(paths["atlas_dir"], "seg.left.mgz")
-    right_seg = os.path.join(paths["atlas_dir"], "seg.right.mgz")
-    combined_seg = os.path.join(paths["atlas_dir"], "seg.mgz")
+    left_seg = os.path.join(paths["atlas_dir"], "nextbrain_segmentation", "seg_left.mgz")
+    right_seg = os.path.join(paths["atlas_dir"], "nextbrain_segmentation", "seg_right.mgz")
+    combined_seg = os.path.join(paths["atlas_dir"], "nextbrain_segmentation", "seg.mgz")
     run_cmd([
         "mri_concat",
         "--o", combined_seg,
@@ -195,7 +198,7 @@ def freesurfer_atlas_generation(paths, nthreads, subject_id):
 
 if __name__ == '__main__':
     paths = get_subject_paths("/home/nikita/Nikita_MRI/me")
-    nextbrain_atlas_generation(paths, 102, )
+    nextbrain_atlas_generation(paths, 50)
 
 
 

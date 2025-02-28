@@ -86,12 +86,14 @@ def tractography_resample_and_extract_metrics(subj_dir, nthreads):
         peaks_n100_txt = os.path.join(peaks_dir, f"{tract_name}_peaks.txt")
 
         # Track generation using tckgen
+        # Changed cutoff to 0.1 and implemented -seed_unidirectional
         run_cmd([
             "tckgen",
             "-algorithm", "iFOD2",
             os.path.join(subj_dir, "raw", "5_dwi", "wm_norm.mif"),
             tck_path,
             "-seed_image", bundle_path,
+            "-seed_unidirectional",
             "-mask", bundle_path,
             "-include", bundle_b_path,
             "-include", bundle_e_path,
@@ -99,7 +101,7 @@ def tractography_resample_and_extract_metrics(subj_dir, nthreads):
             "-maxlength", "250",
             "-seeds", "1000000",
             "-select", "2000",
-            "-cutoff", "0.05",
+            "-cutoff", "0.1",
             "-nthreads", str(nthreads),
             "-force"
         ])
@@ -156,14 +158,16 @@ def tractography_resample_and_extract_metrics(subj_dir, nthreads):
             "tcksample",
             tck_path,
             peaks_path_group_RF,
-            peaks_txt
+            peaks_txt,
+            "-force"
         ])
 
         run_cmd([
             "tcksample",
             tck_N100,
             peaks_path_group_RF,
-            peaks_n100_txt
+            peaks_n100_txt,
+            "-force"
         ])
 
 
