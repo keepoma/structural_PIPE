@@ -5,6 +5,7 @@ import networkx as nx
 from networkx.algorithms.community import girvan_newman
 from networkx.algorithms.community.quality import modularity
 import seaborn as sns
+import csv
 
 
 def lookup_dictionary(lookup_txt):
@@ -29,14 +30,15 @@ def lookup_dictionary(lookup_txt):
     return lookup
 
 
-def load_connectivity_matrix(sc_path):
+def load_and_clip_connectivity_matrix(sc_path):
     """
-    Load the structural connectivity matrix from a CSV file and clip extreme values.
+    Load the structural connectivity matrix from a CSV file and clip values
     """
 
     sc = np.genfromtxt(sc_path, delimiter=',')
-    # Clip extreme outliers at the 99th percentile for better visualization
-    upper_bound = np.percentile(sc, 99)
+    # Clip outliers manually (for now) by percentiles
+    upper_bound = np.percentile(sc, 99, )
+    lower_bound = np.percentile(sc, 10, )
     sc_clipped = np.clip(sc, None, upper_bound)
     return sc_clipped
 
@@ -235,7 +237,7 @@ def compute_all():
     lookup = lookup_dictionary(lookup_txt)
 
     # Load connectivity matrix and create graph.
-    sc_matrix = load_connectivity_matrix(sc_path)
+    sc_matrix = load_and_clip_connectivity_matrix(sc_path)
     G = create_graph(sc_matrix)
 
     # Compute all graph metrics.
@@ -276,16 +278,70 @@ def global_reaching_centrality(graph, centrality_func=nx.degree_centrality):
 
 
 def test_code():
-    # matrix on desktop
-    #matrix = np.loadtxt('/home/nikita/Nikita_MRI/me/connectome/connectome_fa.csv', delimiter=',')
 
-    connectome_dir = "/Users/nikitakaruzin/Desktop/Research/Picht/my_brain/Processed/connectome"
-    for filename in os.listdir(connectome_dir):
-        full_path = os.path.join(connectome_dir, filename)
-        if full_path == "/Users/nikitakaruzin/Desktop/Research/Picht/my_brain/Processed/atlas/hcpmmp1.csv":
-            visualize_matrix(full_path, clip=True)
-        else:
-            visualize_matrix(full_path, clip=False)
+    root = input("Paste complete file path to study folder: ")
+    print("Running test code...")
+    # 1) Load your lookup (optional, for labeling nodes)
+    lookup_path = "/Users/nikitakaruzin/MRI/projects/BATMAN/DWI/hcpmmp1_ordered.txt"
+    lookup = lookup_dictionary(lookup_path)
+
+    # 2) Load your connectivity matrix
+    sc_path = "/Users/nikitakaruzin/Desktop/Research/Picht/my_brain/me/atlas/hcpmmp1.csv"
+    matrix = load_and_clip_connectivity_matrix(sc_path)
+
+    # 3) Create the graph
+    G = create_graph(matrix)
+
+    # 4) Compute centrality metrics
+
+    # 4a) Degree Centrality (non-weighted) and Strength (weighted)
+    degree_centrality = nx.degree_centrality(G)
+    strength = {node: sum(data['weight'] for _, _, data in G.edges(node, data=True))
+                for node in G.nodes}
+
+    # 4b) Eigenvector Centrality
+    #     If your graph is large or possibly disconnected, you might need to
+    #     increase max_iter or handle components separately.
+    eigenvector_centrality = nx.eigenvector_centrality(G, max_iter=1000)
+
+    # 4c) Betweenness Centrality
+    betweenness_centrality = nx.betweenness_centrality(G, weight='weight')
+
+    # 5) Global Reaching Centrality (based on degree by default)
+    grc = global_reaching_centrality(G, centrality_func=nx.degree_centrality)
+
+    # 6) Efficiency metrics
+    global_efficiency = nx.global_efficiency(G)
+    local_efficiency = nx.local_efficiency(G)
+
+    output_dir = os.path.join(root, "group_analysis", "connectome_analysis_outputs")
+    os.makedirs(output_dir, exist_ok=True)
+
+    # 7) Save node-level metrics to a CSV file
+    node_csv_file = os.path.join(output_dir, "node_metrics.csv")
+    with open(node_csv_file, "w", newline="") as csvfile:
+        writer = csv.writer(csvfile)
+        # Write header row
+        writer.writerow(["Label", "Degree Centrality", "Strength", "Eigenvector Centrality", "Betweenness Centrality"])
+        # Write metrics for each node
+        for node in G.nodes():
+            label = lookup.get(node, f"Node_{node}")
+            d = degree_centrality.get(node, 0)
+            s = strength.get(node, 0)
+            e = eigenvector_centrality.get(node, 0)
+            b = betweenness_centrality.get(node, 0)
+            writer.writerow([label, f"{d:.4f}", f"{s:.4f}", f"{e:.4f}", f"{b:.4f}"])
+
+    # 8) Save global metrics to a separate CSV file
+    global_csv_file = os.path.join(output_dir, "global_metrics.csv")
+    with open(global_csv_file, "w", newline="") as csvfile:
+        writer = csv.writer(csvfile)
+        # Write header row
+        writer.writerow(["Global Reaching Centrality", "Global Efficiency", "Local Efficiency"])
+        # Write the metrics
+        writer.writerow([f"{grc:.4f}", f"{global_efficiency:.4f}", f"{local_efficiency:.4f}"])
+
+    print("Saved 2 CSVs")
 
 
 def main():
