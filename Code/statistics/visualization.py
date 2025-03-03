@@ -6,6 +6,56 @@ import seaborn as sns
 import pandas as pd
 
 
+def visualize_matrix_weights(sc_path, bins=50):
+    """
+    Loads a matrix and plots a histogram of its values.
+    """
+
+    matrix = np.genfromtxt(sc_path, delimiter=',')
+
+    matrix_c99 = matrix.copy()
+    upper_bound = np.percentile(matrix_c99, 99)
+    matrix_c99 = np.clip(matrix_c99, None, upper_bound)
+
+    matrix_c95 = matrix.copy()
+    upper_bound = np.percentile(matrix_c95, 95)
+    matrix_c95 = np.clip(matrix_c95, None, upper_bound)
+
+    matrix_c90 = matrix.copy()
+    upper_bound = np.percentile(matrix_c90, 90)
+    matrix_c90 = np.clip(matrix_c90, None, upper_bound)
+
+    # Create side-by-side subplots
+    fig, axs = plt.subplots(2, 2, figsize=(12, 10))
+
+    # Top left: non clipped
+    axs[0, 0].hist(matrix, bins=bins, edgecolor='black')
+    axs[0, 0].set_title("No Clipping")
+    axs[0, 0].set_xlabel("Weight")
+    axs[0, 0].set_ylabel("Frequency")
+
+    # Top-right: 99% clipped
+    axs[0, 1].hist(matrix_c99, bins=bins, edgecolor='black')
+    axs[0, 1].set_title("99% Clipped")
+    axs[0, 1].set_xlabel("Weight")
+    axs[0, 1].set_ylabel("Frequency")
+
+    # Bottom-left: 95% clipped
+    axs[1, 0].hist(matrix_c95, bins=bins, edgecolor='black')
+    axs[1, 0].set_title("95% Clipped")
+    axs[1, 0].set_xlabel("Weight")
+    axs[1, 0].set_ylabel("Frequency")
+
+    # Bottom-right: 90% clipped
+    axs[1, 1].hist(matrix_c90, bins=bins, edgecolor='black')
+    axs[1, 1].set_title("90% Clipped")
+    axs[1, 1].set_xlabel("Weight")
+    axs[1, 1].set_ylabel("Frequency")
+
+    plt.tight_layout()
+    plt.show()
+
+
 def visualize_graph(G, lookup):
     """
     Visualize the graph using a spring layout and label nodes using the lookup dictionary

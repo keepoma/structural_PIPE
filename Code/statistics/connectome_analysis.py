@@ -6,8 +6,8 @@ import csv
 from helpers.statistical_helpers import (lookup_dictionary, threshold_matrix_by_weight,
                                          threshold_matrix_by_clipping, create_graph,
                                          load_node_metrics_as_dataframe)
-from visualization import (visualize_saved_metrics, plot_metric_boxplot,
-                           plot_metric_violin)
+from visualization import (visualize_matrix_weights, visualize_saved_metrics,
+                           plot_metric_boxplot, plot_metric_violin)
 
 
 def global_reaching_centrality(graph, centrality_func=nx.degree_centrality):
@@ -120,6 +120,78 @@ def compute_metrics_for_weight_threshold_range(root, sc_path,
     return threshold_to_node_csv, threshold_to_global_csv
 
 
+def find_top_edges(sc_path, lookup_path, threshold=None, top_n=None):
+    """
+    Finds edges with the highest weights in the matrix.
+    """
+
+    # Load matrix and lookup
+    sc = np.genfromtxt(sc_path, delimiter=',')
+    lookup = lookup_dictionary(lookup_path)
+
+    edges = []
+    # Return dimension of NumPy array, so n is basically n of nodes (rows)
+    n = sc.shape[0]
+
+    """
+    In a 2D NxN matrix there is a:
+    - diagonal (cells i,i)
+    - lower triangle (cells j < i)
+    - upper triangle (cells j > i)
+    """
+    # Iterate over upper triangle (assuming symmetric matrix)
+    # loops over every row
+    for i in range(n):
+        # loops only over columns greater than i
+        for j in range(i + 1, n):
+            w = sc[i, j]
+            edges.append((i, j, w))
+
+    # Filter by threshold (optional)
+    if threshold is not None:
+        edges = [edge for edge in edges if edge[2] > threshold]
+
+    # Sort descending by weight
+    edges.sort(key=lambda x: x[2], reverse=True)
+
+    # Take top_n (optional)
+    if top_n is not None and top_n < len(edges):
+        edges = edges[:top_n]
+
+    # Convert node indices to labels
+    labeled_edges = []
+    for (i, j, w) in edges:
+        label_i = lookup.get(i, f"Node_{i}")
+        label_j = lookup.get(j, f"Node_{j}")
+        labeled_edges.append((label_i, label_j, w))
+
+    return labeled_edges
+
+
+def find_top_nodes_by_strength(sc_path, lookup_path, top_n=10):
+    """
+    Finds the nodes with the highest total connection weight.
+    """
+
+    sc = np.genfromtxt(sc_path, delimiter=',')
+    lookup = lookup_dictionary(lookup_path)
+
+    # If the matrix is NxN, the strength of node i is the sum of row i (or column i).
+    strengths = np.nansum(sc, axis=1)
+
+    # Create list of (node_index, strength)
+    indexed_strengths = list(enumerate(strengths))
+
+    # Sort descending by strength
+    indexed_strengths.sort(key=lambda x: x[1], reverse=True)
+
+    # Convert to labels
+    top_nodes = []
+    for i, val in indexed_strengths[:top_n]:
+        label = lookup.get(i, f"Node_{i}")
+        top_nodes.append((label, val))
+
+    return top_nodes
 
 
 def main():
@@ -129,6 +201,8 @@ def main():
     sc_path = "/Users/nikitakaruzin/Desktop/Research/Picht/my_brain/me/atlas/hcpmmp1.csv"
     lookup_path = "/Users/nikitakaruzin/MRI/projects/BATMAN/DWI/hcpmmp1_ordered.txt"
 
+    #visualize_matrix_weights(sc_path)
+
     threshold_to_node_csv, threshold_to_global_csv = compute_metrics_for_weight_threshold_range(
         root=root,
         sc_path=sc_path,
@@ -137,14 +211,27 @@ def main():
         binarize=False,
         overwrite=False
     )
-    df_nodes = load_node_metrics_as_dataframe(threshold_to_node_csv)
-    print(df_nodes.columns)
+    #visualize_saved_metrics(threshold_to_node_csv, threshold_to_global_csv)
 
-    visualize_saved_metrics(threshold_to_node_csv, threshold_to_global_csv)
+    top_edges = find_top_edges(
+        sc_path=sc_path,
+        lookup_path=lookup_path,
+        threshold=10000,
+        top_n=10
+    )
+    print("==== Strongest connections between: ====")
+    for edge in top_edges:
+        print(edge)
 
-    plot_metric_boxplot(df_nodes, metric="Degree Centrality")
-    plot_metric_boxplot(df_nodes, metric="Strength")
-    #plot_metric_violin(df_nodes, metric="Degree Centrality")
+    top_nodes = find_top_nodes_by_strength(
+        sc_path=sc_path,
+        lookup_path=lookup_path,
+        top_n=10
+    )
+    print("==== Strongest nodes: ====")
+    for node in top_nodes:
+        print(node)
+
 
 
 
