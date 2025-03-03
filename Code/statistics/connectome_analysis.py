@@ -30,17 +30,38 @@ def lookup_dictionary(lookup_txt):
     return lookup
 
 
-def load_and_clip_connectivity_matrix(sc_path):
+def threshold_matrix_by_clipping(sc_path, lower_pct, upper_pct, binarize=False):
     """
     Load the structural connectivity matrix from a CSV file and clip values
     """
 
     sc = np.genfromtxt(sc_path, delimiter=',')
-    # Clip outliers manually (for now) by percentiles
-    upper_bound = np.percentile(sc, 99, )
-    lower_bound = np.percentile(sc, 10, )
-    sc_clipped = np.clip(sc, None, upper_bound)
-    return sc_clipped
+
+    # 1) Clip (not remove) extreme high values at upper_pct percentile
+    high_val = np.percentile(sc, upper_pct)
+    sc[sc > high_val] = high_val
+
+    # 2) Threshold at the lower_pct percentile
+    low_val = np.percentile(sc, lower_pct)
+    sc[sc < low_val] = 0
+
+    # (Optional) Binarize
+    if binarize:
+        sc[sc > 0] = 1
+
+    return sc
+
+def threshold_matrix_by_weight(sc_path, weight_threshold=0.2, binarize=False):
+    """
+    Zeros out all edge weights below the specified weight_threshold.
+    """
+
+    sc = np.genfromtxt(sc_path, delimiter=',')
+    sc[sc < weight_threshold] = 0.0
+    if binarize:
+        sc[sc > 0] = 1.0
+
+    return sc
 
 
 def create_graph(matrix):
@@ -226,7 +247,7 @@ def visualize_matrix(matrix_path, clip):
 
 def compute_all():
     # Laptop files
-    sc_path = "/Users/nikitakaruzin/Desktop/Research/Picht/my_brain/Processed/atlas/hcpmmp1.csv"
+    #sc_path = "/Users/nikitakaruzin/Desktop/Research/Picht/my_brain/Processed/atlas/hcpmmp1.csv"
     #lookup_txt = "/Users/nikitakaruzin/MRI/projects/BATMAN/DWI/hcpmmp1_ordered.txt"
 
     # Desktop files
@@ -237,7 +258,7 @@ def compute_all():
     lookup = lookup_dictionary(lookup_txt)
 
     # Load connectivity matrix and create graph.
-    sc_matrix = load_and_clip_connectivity_matrix(sc_path)
+    sc_matrix = threshold_matrix_by_clipping(sc_path)
     G = create_graph(sc_matrix)
 
     # Compute all graph metrics.
@@ -280,15 +301,22 @@ def global_reaching_centrality(graph, centrality_func=nx.degree_centrality):
 def test_code():
 
     root = input("Paste complete file path to study folder: ")
+    thr_choice = int(input("Would you to use 1) percentile clipping or 2) weight thresholding?: "))
     print("Running test code...")
     # 1) Load your lookup (optional, for labeling nodes)
-    lookup_path = "/Users/nikitakaruzin/MRI/projects/BATMAN/DWI/hcpmmp1_ordered.txt"
+    #lookup_path = "/Users/nikitakaruzin/MRI/projects/BATMAN/DWI/hcpmmp1_ordered.txt"
+    lookup_path = "/home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_ordered.txt"
+
     lookup = lookup_dictionary(lookup_path)
 
     # 2) Load your connectivity matrix
-    sc_path = "/Users/nikitakaruzin/Desktop/Research/Picht/my_brain/me/atlas/hcpmmp1.csv"
-    matrix = load_and_clip_connectivity_matrix(sc_path)
+    #sc_path = "/Users/nikitakaruzin/Desktop/Research/Picht/my_brain/me/atlas/hcpmmp1.csv"
+    sc_path = "/home/nikita/Nikita_MRI/me/atlas/hcpmmp1.csv"
 
+    if thr_choice == 1:
+        matrix = threshold_matrix_by_clipping(sc_path, 5, 99)
+    elif thr_choice == 2:
+        matrix = threshold_matrix_by_weight(sc_path, 0.2)
     # 3) Create the graph
     G = create_graph(matrix)
 
