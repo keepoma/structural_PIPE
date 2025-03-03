@@ -131,3 +131,34 @@ def print_top_nodes(metrics, lookup, top_n=5):
         label = lookup.get(node, f"Node_{node}")
         print(f"{label} (ID: {node + 1}): {value:.4f}")
 
+
+def compute_all():
+    # Laptop files
+    #sc_path = "/Users/nikitakaruzin/Desktop/Research/Picht/my_brain/Processed/atlas/hcpmmp1.csv"
+    #lookup_txt = "/Users/nikitakaruzin/MRI/projects/BATMAN/DWI/hcpmmp1_ordered.txt"
+
+    # Desktop files
+    sc_path = "/home/nikita/Nikita_MRI/me/atlas/hcpmmp1.csv"
+    lookup_txt = "/home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_ordered.txt"
+
+    # Build lookup dictionary for node labels
+    lookup = lookup_dictionary(lookup_txt)
+
+    # Load connectivity matrix and create graph.
+    sc_matrix = threshold_matrix_by_clipping(sc_path)
+    G = create_graph(sc_matrix)
+
+    # Compute all graph metrics.
+    metrics = compute_metrics(G)
+
+    # Print computed global metrics.
+    print("Average clustering coefficient:", metrics['avg_clustering'])
+    print("Global efficiency:", metrics['global_efficiency'])
+    print("Average shortest path length:", metrics['avg_path_length'])
+    print("Degree assortativity coefficient:", metrics['assortativity'])
+    print("Modularity (Girvan-Newman partition):", metrics['modularity'])
+    print("Number of communities detected:", len(metrics['communities']), "\n")
+
+    # Print top nodes for several metrics.
+    print_top_nodes(metrics, lookup, top_n=5)
+
