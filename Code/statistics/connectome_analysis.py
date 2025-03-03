@@ -253,6 +253,27 @@ def compute_all():
     print_top_nodes(metrics, lookup, top_n=5)
 
 
+def global_reaching_centrality(graph, centrality_func=nx.degree_centrality):
+    """
+    Computes the Global Reaching Centrality (GRC) for a given graph,
+    based on a chosen centrality measure (by default, degree centrality).
+
+    One commonly cited definition is:
+        GRC = (1 / (N-1)) * Σ (Cmax - Ci)
+    where:
+        Ci = centrality of node i
+        Cmax = maximum centrality among all nodes
+        N = total number of nodes in the graph
+    """
+    centrality_scores = centrality_func(graph)
+    c_max = max(centrality_scores.values())
+    N = len(centrality_scores)
+
+    # Sum up (C_max - C_i) for all nodes
+    grc_sum = sum((c_max - c) for c in centrality_scores.values())
+    return grc_sum / (N - 1)
+
+
 def random():
     # matrix on desktop
     #matrix = np.loadtxt('/home/nikita/Nikita_MRI/me/connectome/connectome_fa.csv', delimiter=',')
