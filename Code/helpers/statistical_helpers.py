@@ -1,5 +1,6 @@
 import numpy as np
 import networkx as nx
+import pandas as pd
 
 
 def lookup_dictionary(lookup_txt):
@@ -70,3 +71,30 @@ def create_graph(matrix):
     # Remove self-loops if present
     G.remove_edges_from(nx.selfloop_edges(G))
     return G
+
+
+def load_node_metrics_as_dataframe(threshold_to_node_csv):
+    """
+    Given a dictionary mapping {threshold_value: node_csv_path},
+    loads all CSVs and concatenates them into one DataFrame with
+    columns like:
+        ["Label", "Degree Centrality", "Strength",
+         "Eigenvector Centrality", "Betweenness Centrality", "Threshold"]
+
+    Returns a single DataFrame containing all thresholds.
+    """
+
+    dataframes = []
+    for threshold, csv_file in threshold_to_node_csv.items():
+        df = pd.read_csv(csv_file)
+        # The node CSV has columns:
+        #   ["Label", "Degree Centrality", "Strength",
+        #    "Eigenvector Centrality", "Betweenness Centrality"]
+
+        # Add a 'Threshold' column so we know which threshold these rows correspond to
+        df["Threshold"] = threshold
+        dataframes.append(df)
+
+    # Concatenate all per-threshold data into one big DataFrame
+    combined_df = pd.concat(dataframes, ignore_index=True)
+    return combined_df

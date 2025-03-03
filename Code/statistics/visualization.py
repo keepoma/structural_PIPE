@@ -117,3 +117,36 @@ def visualize_saved_metrics(threshold_to_node_csv, threshold_to_global_csv):
     plt.legend()
     plt.tight_layout()
     plt.show()
+
+
+def plot_metric_boxplot(df, metric="Degree Centrality"):
+    """
+    Plots a boxplot of the given 'metric' against the 'Threshold' column.
+    Expects that 'df' has columns: ['Threshold', metric].
+    """
+    # Convert threshold to string so Seaborn treats it as a categorical variable
+    df["Threshold"] = df["Threshold"].astype(str)
+
+    plt.figure(figsize=(8, 6))
+    sns.boxplot(x="Threshold", y=metric, data=df)
+    plt.title(f"Distribution of {metric} by Threshold (Boxplot)")
+    plt.xlabel("Threshold")
+    plt.ylabel(metric)
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_metric_violin(df, metric="Degree Centrality"):
+    """
+    Plots a violin plot of the given 'metric' against the 'Threshold' column.
+    """
+    # Convert threshold to string so Seaborn treats it as a categorical variable
+    df["Threshold"] = df["Threshold"].astype(str)
+
+    plt.figure(figsize=(8, 6))
+    sns.violinplot(x="Threshold", y=metric, data=df, inner="box")
+    plt.title(f"Distribution of {metric} by Threshold (Violin)")
+    plt.xlabel("Threshold")
+    plt.ylabel(metric)
+    plt.tight_layout()
+    plt.show()
