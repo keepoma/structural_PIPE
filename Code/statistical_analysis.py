@@ -7,38 +7,6 @@ from scipy import stats
 from helpers.helpers import run_cmd, get_subject_paths, get_subject_dirs, create_tractseg_file
 
 
-def compute_group_response_functions(root, output_dir, nthreads):
-    """
-    Compute group-average response functions for each tissue type.
-    """
-
-    os.makedirs(output_dir, exist_ok=True)
-    subject_dirs = get_subject_dirs(root)
-
-    # List of tissue types to process.
-    tissue_types = ["wm", "gm", "csf"]
-    response_files = {tissue: [] for tissue in tissue_types}
-
-    # Gather response function files for each subject.
-    for subj_dir in subject_dirs:
-        paths = get_subject_paths(subj_dir)
-        for tissue in tissue_types:
-            tissue_file = os.path.join(paths["five_dwi"], f"{tissue}.txt")
-            response_files[tissue].append(tissue_file)
-
-    # Run the responsemean command for each tissue type.
-    for tissue in tissue_types:
-        group_file = os.path.join(output_dir, f"group_average_response_{tissue}.txt")
-
-        run_cmd([
-            "responsemean",
-            *response_files[tissue],
-            group_file,
-            "-nthreads", str(nthreads),
-            "-force"
-        ])
-
-
 def visualize_fa(csv_file):
     """
     Visualizes the FA profile along a tract from a CSV file.
