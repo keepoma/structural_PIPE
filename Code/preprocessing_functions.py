@@ -314,7 +314,8 @@ def calculate_tensors_and_dmri_metrics(paths, nthreads):
     run_cmd([
         "mrconvert",
         fa_output_mif,
-        fa_output_nii
+        fa_output_nii,
+        "-force"
     ])
 
     # Apparent Diffusion Coefficient map
