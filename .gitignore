@@ -2,6 +2,7 @@
 .DS_Store
 gsg/
 population_template*/
+Code/statistics/__pycache__/
 Code/__init__.py
 Code/AF_peak_values.txt
 Code/backup_structural_PIPE
