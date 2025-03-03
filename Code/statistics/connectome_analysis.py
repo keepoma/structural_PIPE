@@ -265,6 +265,7 @@ def global_reaching_centrality(graph, centrality_func=nx.degree_centrality):
         Cmax = maximum centrality among all nodes
         N = total number of nodes in the graph
     """
+
     centrality_scores = centrality_func(graph)
     c_max = max(centrality_scores.values())
     N = len(centrality_scores)
@@ -274,7 +275,7 @@ def global_reaching_centrality(graph, centrality_func=nx.degree_centrality):
     return grc_sum / (N - 1)
 
 
-def random():
+def test_code():
     # matrix on desktop
     #matrix = np.loadtxt('/home/nikita/Nikita_MRI/me/connectome/connectome_fa.csv', delimiter=',')
 
@@ -288,8 +289,25 @@ def random():
 
 
 def main():
-    compute_all()
-    #random()
+    function_list = [
+        ("Compute All", compute_all),
+        ("Test Code", test_code),
+    ]
+
+    for idx, (desc, _) in enumerate(function_list, start=1):
+        print(f"{idx}. {desc}")
+
+    # Get user input for the function to execute
+    choice = input("Enter the number corresponding to the function you want to execute: ")
+    try:
+        choice = int(choice)
+        if 1 <= choice <= len(function_list):
+            _, func = function_list[choice - 1]
+            func()
+        else:
+            print("Invalid number. Please choose a valid option.")
+    except ValueError:
+        print("Invalid input. Please enter a number.")
 
 
 if __name__ == "__main__":
