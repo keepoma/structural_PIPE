@@ -31,6 +31,8 @@ def connectome_generation(paths, nthreads):
     """
     # It would be interesting to consider scaling by parcel volume or connection length with
     # -scale_invnodevol or -scale_invlength, respectively
+    # maybe use -scale_length here if tckedit min und max length fail
+
     run_cmd([
         "tck2connectome",
         "-tck_weights_in", sift2_output,

@@ -33,12 +33,17 @@ def generate_tracks_and_sift(paths, nthreads):
     tckgen_output = os.path.join(paths["tck_dir"], "tracks_10mio.tck")
     fivett_coreg = os.path.join(paths["mat_dir"], "5tt_coreg.mif")
     output_seed = os.path.join(paths["mat_dir"], "gmwmSeed_coreg.mif")
+    wm_norm = os.path.join(paths["five_dwi"], "wm_norm.mif")
+
     run_cmd([
-        "tckgen", "-act",
-        fivett_coreg, "-backtrack",
+        "tckgen",
+        "-algorithm", "iFOD2",
+        "-act", fivett_coreg, "-backtrack",
         "-seed_gmwmi", output_seed,
         "-select", "10000000",
-        os.path.join(paths["five_dwi"], "wm_norm.mif"),
+        "-minlength", "10",
+        "-maxlength", "250",
+        wm_norm,
         tckgen_output,
         "-nthreads", str(nthreads),
         "-force"
