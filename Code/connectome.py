@@ -41,7 +41,7 @@ def connectome_generation(paths, nthreads):
         connectome_csv,
         "-out_assignment", assignments_csv,
         "-symmetric", "-zero_diagonal",
-        "-scale_length",
+        "-scale_invlength",
         "-nthreads", str(nthreads),
         "-force"
     ])

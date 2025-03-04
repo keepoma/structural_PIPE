@@ -241,11 +241,11 @@ def main():
     """
 
     root = "/home/nikita/Nikita_MRI"
-    sc_path = "/home/nikita/Nikita_MRI/me/atlas/hcpmmp1.csv"
+    sc_path = "/home/nikita/Nikita_MRI/me/atlas/hcpmmp1_scale_length.csv"
     lookup_path = "/home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_ordered.txt"
 
 
-    #visualize_matrix_weights(sc_path)
+    visualize_matrix_weights(sc_path)
 
     # Saves a matrix clipped at percentile
     dir_path = os.path.dirname(sc_path)
@@ -265,7 +265,7 @@ def main():
         binarize=False,
         overwrite=False
     )
-    #visualize_saved_metrics(threshold_to_node_csv, threshold_to_global_csv)
+    visualize_saved_metrics(threshold_to_node_csv, threshold_to_global_csv)
 
     sc_metrics = compute_connectivity_metrics(sc_path)
     print(sc_metrics)
@@ -273,7 +273,7 @@ def main():
     top_edges = find_top_edges(
         sc_path=sc_path,
         lookup_path=lookup_path,
-        threshold=10000,
+        threshold=0,
         top_n=10
     )
     print("==== Strongest connections between: ====")
