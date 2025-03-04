@@ -6,8 +6,8 @@ import csv
 from helpers.statistical_helpers import (lookup_dictionary, threshold_matrix_by_weight,
                                          threshold_matrix_by_clipping, create_graph,
                                          load_node_metrics_as_dataframe)
-from visualization import (visualize_matrix_weights, visualize_saved_metrics,
-                           plot_metric_boxplot, plot_metric_violin)
+from connectome_visualization import (visualize_matrix_weights, visualize_saved_metrics,
+                                      plot_metric_boxplot, plot_metric_violin)
 
 
 def global_reaching_centrality(graph, centrality_func=nx.degree_centrality):
