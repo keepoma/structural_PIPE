@@ -13,7 +13,7 @@ def connectome_generation(paths, nthreads):
     Nodes and edges
     """
 
-    tckgen_output = os.path.join(paths["tck_dir"], "tracks_10mio.tck")
+    tckgen_output = os.path.join(paths["tck_dir"], "tracks_10mio_minmax_restricted.tck")
     parcels_coreg = os.path.join(paths["atlas_dir"], "hcpmmp1_parcels_coreg.mif")
     connectome_csv = os.path.join(paths["atlas_dir"], "hcpmmp1.csv")
     assignments_csv = os.path.join(paths["atlas_dir"], "assignments_hcpmmp1.csv")
@@ -78,7 +78,7 @@ def generate_weighted_connectome_matrices(paths, nthreads):
       3. Calculate the average streamline length between node pairs
     """
 
-    tck_file = os.path.join(paths["tck_dir"], "tracks_10mio.tck")
+    tckgen_output = os.path.join(paths["tck_dir"], "tracks_10mio_minmax_restricted.tck")
     parcels_file = os.path.join(paths["atlas_dir"], "hcpmmp1_parcels_coreg.mif")
     weights_file = os.path.join(paths["tck_dir"], "sift2weights.csv")
 
@@ -92,7 +92,7 @@ def generate_weighted_connectome_matrices(paths, nthreads):
     # Sample dMRI metrics along the streamlines (tcksample with "-stat_tck mean").
     run_cmd([
         "tcksample",
-        tck_file,
+        tckgen_output,
         os.path.join(paths["five_dwi"], "fa.mif"),
         out_fa,
         "-stat_tck", "mean",
@@ -102,7 +102,7 @@ def generate_weighted_connectome_matrices(paths, nthreads):
 
     run_cmd([
         "tcksample",
-        tck_file,
+        tckgen_output,
         os.path.join(paths["five_dwi"], "adc.mif"),
         out_adc,
         "-stat_tck", "mean",
@@ -112,7 +112,7 @@ def generate_weighted_connectome_matrices(paths, nthreads):
 
     run_cmd([
         "tcksample",
-        tck_file,
+        tckgen_output,
         os.path.join(paths["five_dwi"], "ad.mif"),
         out_ad,
         "-stat_tck", "mean",
@@ -122,7 +122,7 @@ def generate_weighted_connectome_matrices(paths, nthreads):
 
     run_cmd([
         "tcksample",
-        tck_file,
+        tckgen_output,
         os.path.join(paths["five_dwi"], "rd.mif"),
         out_rd,
         "-stat_tck", "mean",
@@ -134,7 +134,7 @@ def generate_weighted_connectome_matrices(paths, nthreads):
     # For FA-weighted connectome:
     run_cmd([
         "tck2connectome",
-        tck_file,
+        tckgen_output,
         parcels_file,
         os.path.join(paths["connectome_dir"], "connectome_fa.csv"),
         "-tck_weights_in", weights_file,
@@ -149,7 +149,7 @@ def generate_weighted_connectome_matrices(paths, nthreads):
     # For ADC-weighted connectome:
     run_cmd([
         "tck2connectome",
-        tck_file,
+        tckgen_output,
         parcels_file,
         os.path.join(paths["connectome_dir"], "connectome_adc.csv"),
         "-tck_weights_in", weights_file,
@@ -164,7 +164,7 @@ def generate_weighted_connectome_matrices(paths, nthreads):
     # For AD-weighted connectome:
     run_cmd([
         "tck2connectome",
-        tck_file,
+        tckgen_output,
         parcels_file,
         os.path.join(paths["connectome_dir"], "connectome_ad.csv"),
         "-tck_weights_in", weights_file,
@@ -179,7 +179,7 @@ def generate_weighted_connectome_matrices(paths, nthreads):
     # For RD-weighted connectome:
     run_cmd([
         "tck2connectome",
-        tck_file,
+        tckgen_output,
         parcels_file,
         os.path.join(paths["connectome_dir"], "connectome_rd.csv"),
         "-tck_weights_in", weights_file,
@@ -194,7 +194,7 @@ def generate_weighted_connectome_matrices(paths, nthreads):
     # Generate a connectome matrix of mean streamline lengths
     run_cmd([
         "tck2connectome",
-        tck_file,
+        tckgen_output,
         parcels_file,
         os.path.join(paths["connectome_dir"], "meanlength.csv"),
         "-tck_weights_in", weights_file,

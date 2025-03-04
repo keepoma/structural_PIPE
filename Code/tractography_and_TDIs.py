@@ -30,7 +30,7 @@ def generate_tracks_and_sift(paths, nthreads):
     Generate whole-brain tracks and apply SIFT.
     """
     os.makedirs(paths["tck_dir"], exist_ok=True)
-    tckgen_output = os.path.join(paths["tck_dir"], "tracks_10mio.tck")
+    tckgen_output = os.path.join(paths["tck_dir"], "tracks_10mio_minmax_restricted.tck")
     fivett_coreg = os.path.join(paths["mat_dir"], "5tt_coreg.mif")
     output_seed = os.path.join(paths["mat_dir"], "gmwmSeed_coreg.mif")
     wm_norm = os.path.join(paths["five_dwi"], "wm_norm.mif")
@@ -79,7 +79,7 @@ def generate_tdis(paths, nthreads):
     """
 
     # Define file paths
-    tckgen_output = os.path.join(paths["tck_dir"], "tracks_10mio.tck")
+    tckgen_output = os.path.join(paths["tck_dir"], "tracks_10mio_minmax_restricted.tck")
     sift2_output = os.path.join(paths["tck_dir"], "sift2weights.csv")
     t1_file = os.path.join(paths["two_nifti"], "t1.mif")
     mu_file = os.path.join(paths["tck_dir"], "mu.txt")
