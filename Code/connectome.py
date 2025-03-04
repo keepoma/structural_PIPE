@@ -15,8 +15,8 @@ def connectome_generation(paths, nthreads):
 
     tckgen_output = os.path.join(paths["tck_dir"], "tracks_10mio_minmax_restricted.tck")
     parcels_coreg = os.path.join(paths["atlas_dir"], "hcpmmp1_parcels_coreg.mif")
-    connectome_csv = os.path.join(paths["atlas_dir"], "hcpmmp1.csv")
-    assignments_csv = os.path.join(paths["atlas_dir"], "assignments_hcpmmp1.csv")
+    connectome_csv = os.path.join(paths["atlas_dir"], "hcpmmp1_scale_length.csv")
+    assignments_csv = os.path.join(paths["atlas_dir"], "assignments_hcpmmp1_scale_length.csv")
     sift2_output = os.path.join(paths["tck_dir"], "sift2weights.csv")
     # Parcels no coreg is experimental
     parcels_nocoreg = os.path.join(paths["atlas_dir"], "hcpmmp1_parcels_nocoreg.mif")
@@ -41,6 +41,7 @@ def connectome_generation(paths, nthreads):
         connectome_csv,
         "-out_assignment", assignments_csv,
         "-symmetric", "-zero_diagonal",
+        "-scale_length",
         "-nthreads", str(nthreads),
         "-force"
     ])
@@ -56,7 +57,7 @@ def connectome_generation(paths, nthreads):
     ])
 
     # Constructing a representation of true edge routes with exemplars
-    exemplars = os.path.join(paths["tck_dir"], "exemplars.tck")
+    exemplars = os.path.join(paths["tck_dir"], "exemplars_scale_length.tck")
     run_cmd([
         "connectome2tck", tckgen_output, assignments_csv,
         exemplars, "-tck_weights_in", sift2_output,

@@ -4,7 +4,7 @@ import networkx as nx
 import csv
 from scipy import stats
 
-from helpers.statistical_helpers import (lookup_dictionary, threshold_matrix_by_weight,
+from Code.helpers.statistical_helpers import (lookup_dictionary, threshold_matrix_by_weight,
                                          threshold_matrix_by_clipping, create_graph,
                                          load_node_metrics_as_dataframe)
 from connectome_visualization import (visualize_matrix_weights, visualize_saved_metrics,
@@ -232,13 +232,30 @@ def find_top_nodes_by_strength(sc_path, lookup_path, top_n=10):
 
 
 def main():
-    thresholds = np.linspace(0.1, 1, 9)
+    thresholds = np.linspace(0.1, 10000, 5)
 
+    """
     root = "/Users/nikitakaruzin/Desktop/Research/Picht/my_brain"
     sc_path = "/Users/nikitakaruzin/Desktop/Research/Picht/my_brain/me/atlas/hcpmmp1.csv"
     lookup_path = "/Users/nikitakaruzin/MRI/projects/BATMAN/DWI/hcpmmp1_ordered.txt"
+    """
+
+    root = "/home/nikita/Nikita_MRI"
+    sc_path = "/home/nikita/Nikita_MRI/me/atlas/hcpmmp1.csv"
+    lookup_path = "/home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_ordered.txt"
+
 
     #visualize_matrix_weights(sc_path)
+
+    # Saves a matrix clipped at percentile
+    dir_path = os.path.dirname(sc_path)
+    matrix = np.genfromtxt(sc_path, delimiter=',')
+    matrix_c99 = matrix.copy()
+    upper_bound = np.percentile(matrix_c99, 99)
+    matrix_c99 = np.clip(matrix_c99, None, upper_bound)
+    sc99_path = os.path.join(dir_path, "hcpmmp1_c99.csv")
+    np.savetxt(sc99_path, matrix_c99, delimiter=",")
+
 
     threshold_to_node_csv, threshold_to_global_csv = compute_metrics_for_weight_threshold_range(
         root=root,
