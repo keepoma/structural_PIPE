@@ -2,6 +2,7 @@ import numpy as np
 import os
 import networkx as nx
 import csv
+from scipy import stats
 
 from helpers.statistical_helpers import (lookup_dictionary, threshold_matrix_by_weight,
                                          threshold_matrix_by_clipping, create_graph,
@@ -30,6 +31,42 @@ def global_reaching_centrality(graph, centrality_func=nx.degree_centrality):
     # Sum up (C_max - C_i) for all nodes
     grc_sum = sum((c_max - c) for c in centrality_scores.values())
     return grc_sum / (N - 1)
+
+
+def compute_connectivity_metrics(file_path):
+    """
+    Reads a structural connectivity matrix from a file and computes several metrics.
+    Returns:
+        dict: A dictionary with keys 'mean', 'median', 'mode', 'q1', 'q2 (median)', 'q3',
+              'std' (standard deviation), and 'variance'.
+    """
+
+    matrix = np.genfromtxt(file_path, delimiter=',')
+
+    # Flatten the matrix into a 1D array for computing overall statistics.
+    flat_matrix = matrix.flatten()
+
+    mean_val = np.mean(flat_matrix)
+    median_val = np.median(flat_matrix)
+
+    # Compute quartiles: 25th, 50th (median), and 75th percentiles.
+    q1 = np.percentile(flat_matrix, 25)
+    q3 = np.percentile(flat_matrix, 75)
+
+    # std, var
+    std_val = np.std(flat_matrix)
+    var_val = np.var(flat_matrix)
+
+    metrics = {
+        'mean': mean_val,
+        'median': median_val,
+        'q1': q1,
+        'q3': q3,
+        'std': std_val,
+        'variance': var_val
+    }
+
+    return metrics
 
 
 def compute_metrics_for_weight_threshold_range(root, sc_path,
@@ -213,6 +250,9 @@ def main():
     )
     #visualize_saved_metrics(threshold_to_node_csv, threshold_to_global_csv)
 
+    sc_metrics = compute_connectivity_metrics(sc_path)
+    print(sc_metrics)
+
     top_edges = find_top_edges(
         sc_path=sc_path,
         lookup_path=lookup_path,
@@ -231,8 +271,6 @@ def main():
     print("==== Strongest nodes: ====")
     for node in top_nodes:
         print(node)
-
-
 
 
 if __name__ == "__main__":

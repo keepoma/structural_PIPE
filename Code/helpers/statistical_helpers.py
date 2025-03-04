@@ -46,6 +46,7 @@ def threshold_matrix_by_clipping(sc_path, lower_pct, upper_pct, binarize=False):
 
     return sc
 
+
 def threshold_matrix_by_weight(sc_path, weight_threshold=0.2, binarize=False):
     """
     Zeros out all edge weights below the specified weight_threshold.
