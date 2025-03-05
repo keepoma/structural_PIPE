@@ -256,7 +256,7 @@ def FOD_normalization_peaks(paths, root, nthreads):
         "-force"
     ])
 
-    # Generate peaks on individual and group RF
+    # Generate peaks on individual and group FODs
     peaks_path_individual_RF = os.path.join(paths["two_nifti"], "fod_peaks_individual_RF.nii.gz")
     peaks_path_group_RF = os.path.join(paths["two_nifti"], "fod_peaks_group_RF.nii.gz")
 
