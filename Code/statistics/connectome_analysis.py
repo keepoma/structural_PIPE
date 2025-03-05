@@ -158,13 +158,13 @@ def compute_metrics_for_weight_threshold_range(root, sc_path,
     return threshold_to_node_csv, threshold_to_global_csv
 
 
-def find_top_edges(sc_path, lookup_path, threshold=None, top_n=None):
+def find_top_edges(matrix, lookup_path, threshold=None, top_n=None):
     """
     Finds edges with the highest weights in the matrix.
     """
 
     # Load matrix and lookup
-    sc = np.genfromtxt(sc_path, delimiter=',')
+    sc = matrix
     lookup = lookup_dictionary(lookup_path)
 
     edges = []
@@ -206,12 +206,12 @@ def find_top_edges(sc_path, lookup_path, threshold=None, top_n=None):
     return labeled_edges
 
 
-def find_top_nodes_by_strength(sc_path, lookup_path, top_n=10):
+def find_top_nodes_by_strength(matrix, lookup_path, top_n=10):
     """
     Finds the nodes with the highest total connection weight.
     """
 
-    sc = np.genfromtxt(sc_path, delimiter=',')
+    sc = matrix
     lookup = lookup_dictionary(lookup_path)
 
     # If the matrix is NxN, the strength of node i is the sum of row i (or column i).
@@ -287,6 +287,7 @@ def connectome_analysis_pipe(workspace):
         title="Comparison of Original and Thresholded Matrices",
         bins=50
     )
+    """
     print(matrix.shape)
     print(matrix.size)
 
@@ -299,6 +300,8 @@ def connectome_analysis_pipe(workspace):
     print(matrix_cut_w_2std.shape)
     print(matrix_cut_w_2std.size)
     visualize_matrix_weights(matrix_cut_w_2std, "Matrix with weight cut < two std weight")
+    """
+
 
     threshold_to_node_csv, threshold_to_global_csv = compute_metrics_for_weight_threshold_range(
         root=root,
@@ -310,9 +313,13 @@ def connectome_analysis_pipe(workspace):
     )
     #visualize_saved_metrics(threshold_to_node_csv, threshold_to_global_csv)
 
-
+    matrix_cut_w_mean_NaN = matrix.copy()
+    matrix_cut_w_mean_NaN[matrix_cut_w_mean_NaN < threshold] = np.nan
+    matrix_cut_w_2std_NaN = matrix.copy()
+    matrix_cut_w_2std_NaN[matrix_cut_w_mean_NaN < 2*std] = np.nan
+    print(matrix_cut_w_mean_NaN.shape)
     top_edges = find_top_edges(
-        sc_path=sc_path,
+        matrix=matrix_cut_w_2std_NaN,
         lookup_path=lookup_path,
         threshold=0,
         top_n=10
@@ -322,7 +329,7 @@ def connectome_analysis_pipe(workspace):
         print(edge)
 
     top_nodes = find_top_nodes_by_strength(
-        sc_path=sc_path,
+        matrix=matrix_cut_w_2std_NaN,
         lookup_path=lookup_path,
         top_n=10
     )
