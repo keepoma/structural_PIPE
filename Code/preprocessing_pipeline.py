@@ -6,14 +6,17 @@ from registration import register_t1_and_5tt_to_dwi
 
 
 """
-This script contains the function with the preproc steps that are shared between
-both pipes.
+This script contains the function with the preproc steps that are shared between both pipes.
 Also contains a function for individual subject preprocessing
-It's supposed to be imported and built upon.
+Supposed to be imported and built upon.
 """
 
 
 def preprocessing_pipeline(root, nthreads, do_hsvs):
+    """
+    Man preprocessing pipeline.
+    """
+    
     subject_dirs = get_subject_dirs(root)
 
     is_preprocessed = ask_yes_no("Is every subject in this folder preprocessed?")
@@ -51,14 +54,12 @@ def preprocessing_pipeline(root, nthreads, do_hsvs):
         if not is_preprocessed:
             fancy_print("Performing FOD and normalization", subj_dir)
             preproc.FOD_normalization_peaks(paths, root, nthreads)
-    print(f"\n========= Preprocessing of all subjects COMPLETE =========\n")
 
     for subj_dir in subject_dirs:
         paths = get_subject_paths(subj_dir)
         if not has_registration:
             fancy_print("Registering T1 and 5tt to dMRI Space", subj_dir)
             register_t1_and_5tt_to_dwi(paths, nthreads, do_hsvs)
-    print(f"\n========= Transformation matrix and registration of T1 and 5tt to DWI for all subjects COMPLETE =========\n")
 
 
 def individual_preproc(root, nthreads, do_hsvs):
