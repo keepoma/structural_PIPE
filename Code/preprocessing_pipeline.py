@@ -16,7 +16,7 @@ def preprocessing_pipeline(root, nthreads, do_hsvs):
     """
     Man preprocessing pipeline.
     """
-    
+
     subject_dirs = get_subject_dirs(root)
 
     is_preprocessed = ask_yes_no("Is every subject in this folder preprocessed?")

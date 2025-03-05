@@ -6,12 +6,10 @@ import seaborn as sns
 import pandas as pd
 
 
-def visualize_matrix_weights(sc_path, bins=50):
+def visualize_matrix_weights(matrix, title, bins=50):
     """
     Loads a matrix and plots a histogram of its values.
     """
-
-    matrix = np.genfromtxt(sc_path, delimiter=',')
 
     matrix_c99 = matrix.copy()
     upper_bound = np.percentile(matrix_c99, 99)
@@ -27,6 +25,7 @@ def visualize_matrix_weights(sc_path, bins=50):
 
     # Create side-by-side subplots
     fig, axs = plt.subplots(2, 2, figsize=(12, 10))
+    fig.suptitle(title, fontsize=16)
 
     # Top left: non clipped
     axs[0, 0].hist(matrix, bins=bins, edgecolor='black')
@@ -49,6 +48,52 @@ def visualize_matrix_weights(sc_path, bins=50):
     # Bottom-right: 90% clipped
     axs[1, 1].hist(matrix_c90, bins=bins, edgecolor='black')
     axs[1, 1].set_title("90% Clipped")
+    axs[1, 1].set_xlabel("Weight")
+    axs[1, 1].set_ylabel("Frequency")
+
+    plt.tight_layout()
+    plt.show()
+
+
+def visualize_matrix_comparison(
+    original_matrix,
+    matrix_cut_w_mean,
+    matrix_cut_w_1std,
+    matrix_cut_w_2std,
+    title="Comparison of Thresholded Matrices",
+    bins=50
+):
+    """
+    Plots histograms of four different matrices (or 1D arrays) in a 2x2 layout:
+      1) The original matrix
+      2) matrix_cut_w_mean (cut at mean)
+      3) matrix_cut_w_1std (cut at 1*std)
+      4) matrix_cut_w_2std (cut at 2*std)
+    """
+    fig, axs = plt.subplots(2, 2, figsize=(12, 10))
+    fig.suptitle(title, fontsize=16)
+
+    # Top-left: Original
+    axs[0, 0].hist(original_matrix.ravel(), bins=bins, edgecolor='black')
+    axs[0, 0].set_title("Original")
+    axs[0, 0].set_xlabel("Weight")
+    axs[0, 0].set_ylabel("Frequency")
+
+    # Top-right: Cut >= Mean
+    axs[0, 1].hist(matrix_cut_w_mean.ravel(), bins=bins, edgecolor='black')
+    axs[0, 1].set_title("Cut >= Mean")
+    axs[0, 1].set_xlabel("Weight")
+    axs[0, 1].set_ylabel("Frequency")
+
+    # Bottom-left: Cut >= 1 STD
+    axs[1, 0].hist(matrix_cut_w_1std.ravel(), bins=bins, edgecolor='black')
+    axs[1, 0].set_title("Cut >= 1 STD")
+    axs[1, 0].set_xlabel("Weight")
+    axs[1, 0].set_ylabel("Frequency")
+
+    # Bottom-right: Cut >= 2 STD
+    axs[1, 1].hist(matrix_cut_w_2std.ravel(), bins=bins, edgecolor='black')
+    axs[1, 1].set_title("Cut >= 2 STD")
     axs[1, 1].set_xlabel("Weight")
     axs[1, 1].set_ylabel("Frequency")
 

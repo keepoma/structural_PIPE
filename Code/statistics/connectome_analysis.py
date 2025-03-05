@@ -3,12 +3,13 @@ import os
 import networkx as nx
 import csv
 from scipy import stats
-
+from Code.helpers.helpers import get_subject_dirs, get_subject_paths
 from Code.helpers.statistical_helpers import (lookup_dictionary, threshold_matrix_by_weight,
                                          threshold_matrix_by_clipping, create_graph,
                                          load_node_metrics_as_dataframe)
 from connectome_visualization import (visualize_matrix_weights, visualize_saved_metrics,
-                                      plot_metric_boxplot, plot_metric_violin)
+                                      plot_metric_boxplot, plot_metric_violin,
+                                      visualize_matrix_comparison)
 
 
 def global_reaching_centrality(graph, centrality_func=nx.degree_centrality):
@@ -231,31 +232,73 @@ def find_top_nodes_by_strength(sc_path, lookup_path, top_n=10):
     return top_nodes
 
 
-def main():
-    thresholds = np.linspace(0.1, 10000, 5)
+def connectome_analysis_pipe(workspace):
 
-    """
-    root = "/Users/nikitakaruzin/Desktop/Research/Picht/my_brain"
-    sc_path = "/Users/nikitakaruzin/Desktop/Research/Picht/my_brain/me/atlas/hcpmmp1.csv"
-    lookup_path = "/Users/nikitakaruzin/MRI/projects/BATMAN/DWI/hcpmmp1_ordered.txt"
-    """
+    # Getting custom user input
+    if workspace == 1:
+        root = "/Users/nikitakaruzin/Desktop/Research/Picht/my_brain"
+        sc_path = "/Users/nikitakaruzin/Desktop/Research/Picht/my_brain/me/atlas/hcpmmp1.csv"
+        lookup_path = "/Users/nikitakaruzin/MRI/projects/BATMAN/DWI/hcpmmp1_ordered.txt"
+    elif workspace == 2 or '2':
+        root = "/home/nikita/Nikita_MRI"
+        sc_path = "/home/nikita/Nikita_MRI/me/atlas/hcpmmp1.csv"
+        lookup_path = "/home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_ordered.txt"
+    elif workspace == 3:
+        # HPC subjects
+        root = input("Root: ")
+        subject_dirs = get_subject_dirs(root)
+        for index, directory in enumerate(subject_dirs, start=1):
+            print(f"{index}. {directory}")
+        choice = int(input("Select a directory by entering its number: "))
+        selected_directory = subject_dirs[choice - 1]  # Adjust for zero-based indexing
+        sc_path = os.path.join(root, selected_directory, "atlas", "hcpmmp1.csv")
+        lookup_path = "/home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_ordered.txt"
+    else:
+        raise ValueError("Unknown workspace value provided. Please choose 1, 2, or 3.")
 
-    root = "/home/nikita/Nikita_MRI"
-    sc_path = "/home/nikita/Nikita_MRI/me/atlas/hcpmmp1_scale_length.csv"
-    lookup_path = "/home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_ordered.txt"
-
-
-    visualize_matrix_weights(sc_path)
-
-    # Saves a matrix clipped at percentile
-    dir_path = os.path.dirname(sc_path)
     matrix = np.genfromtxt(sc_path, delimiter=',')
+
+    # Saves a matrix clipped at upper 99th percentile
+    dir_path = os.path.dirname(sc_path)
     matrix_c99 = matrix.copy()
     upper_bound = np.percentile(matrix_c99, 99)
     matrix_c99 = np.clip(matrix_c99, None, upper_bound)
     sc99_path = os.path.join(dir_path, "hcpmmp1_c99.csv")
     np.savetxt(sc99_path, matrix_c99, delimiter=",")
+    thresholds = np.linspace(0.1, 10000, 5)
 
+    sc_metrics = compute_connectivity_metrics(sc_path)
+    print(sc_metrics)
+    # Cuts matrix with weights < mean
+    threshold = sc_metrics["mean"]
+    std = sc_metrics["std"]
+    matrix_cut_w_mean = matrix.copy()
+    matrix_cut_w_1std = matrix.copy()
+    matrix_cut_w_2std = matrix.copy()
+
+    matrix_cut_w_mean = matrix_cut_w_mean[matrix_cut_w_mean >= threshold]
+    matrix_cut_w_1std = matrix_cut_w_1std[matrix_cut_w_1std >= std]
+    matrix_cut_w_2std = matrix_cut_w_2std[matrix_cut_w_2std >= 2*std]
+    visualize_matrix_comparison(
+        original_matrix=matrix,
+        matrix_cut_w_mean=matrix_cut_w_mean,
+        matrix_cut_w_1std=matrix_cut_w_1std,
+        matrix_cut_w_2std=matrix_cut_w_2std,
+        title="Comparison of Original and Thresholded Matrices",
+        bins=50
+    )
+    print(matrix.shape)
+    print(matrix.size)
+
+    print(matrix_cut_w_mean.shape)
+    print(matrix_cut_w_mean.size)
+    visualize_matrix_weights(matrix_cut_w_mean, "Matrix with weight cut < mean weight")
+    print(matrix_cut_w_1std.shape)
+    print(matrix_cut_w_1std.size)
+    visualize_matrix_weights(matrix_cut_w_1std, "Matrix with weight cut < one std weight")
+    print(matrix_cut_w_2std.shape)
+    print(matrix_cut_w_2std.size)
+    visualize_matrix_weights(matrix_cut_w_2std, "Matrix with weight cut < two std weight")
 
     threshold_to_node_csv, threshold_to_global_csv = compute_metrics_for_weight_threshold_range(
         root=root,
@@ -265,10 +308,8 @@ def main():
         binarize=False,
         overwrite=False
     )
-    visualize_saved_metrics(threshold_to_node_csv, threshold_to_global_csv)
+    #visualize_saved_metrics(threshold_to_node_csv, threshold_to_global_csv)
 
-    sc_metrics = compute_connectivity_metrics(sc_path)
-    print(sc_metrics)
 
     top_edges = find_top_edges(
         sc_path=sc_path,
@@ -288,6 +329,11 @@ def main():
     print("==== Strongest nodes: ====")
     for node in top_nodes:
         print(node)
+
+
+def main():
+    workspace = input("1) Laptop 2) HPC me 3) HPC subjects: ")
+    connectome_analysis_pipe(workspace)
 
 
 if __name__ == "__main__":
