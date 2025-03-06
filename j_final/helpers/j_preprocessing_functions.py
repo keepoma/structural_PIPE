@@ -1,4 +1,5 @@
 import os
+import re
 from j_helpers import run_cmd, get_subject_dirs, get_subject_paths
 
 
@@ -14,8 +15,10 @@ def convert_scans(paths, nthreads):
 
     # Helper lambda for paths from the one_raw directory
     anat_path = lambda subpath: os.path.join(paths["anat_dir"], subpath)
+    for filename in os.listdir(paths["anat_dir"]):
+        if re.search(r'T1w\.nii\.gz', filename):
+            t1_nii = os.path.join(paths["anat_dir"], filename)
 
-    t1_nii = os.path.join(paths["anat_dir"], "t1.nii.gz")
     t1_mif = os.path.join(paths["anat_dir"], "t1.mif")
 
     # Convert T1 scan
@@ -34,7 +37,10 @@ def convert_scans(paths, nthreads):
     ])
 
     # Convert dMRI AP scan
-    dwi_ap = os.path.join(paths["dwi_dir", "  "])
+    for filename in os.listdir(paths["dwi_dir"]):
+        if re.search(r'AP\.nii\.gz', filename):
+            dwi_ap = os.path.join(paths["dwi_dir"], filename)
+
     run_cmd([
         "mrconvert", "-nthreads", str(nthreads),
         "-strides", "1,2,3,4",
@@ -43,7 +49,10 @@ def convert_scans(paths, nthreads):
     ])
 
     # Convert dMRI PA scan
-    dwi_pa = os.path.join(paths["dwi_dir", "  "])
+    for filename in os.listdir(paths["dwi_dir"]):
+        if re.search(r'PA\.nii\.gz', filename):
+            dwi_pa = os.path.join(paths["dwi_dir"], filename)
+
     run_cmd([
         "mrconvert", "-nthreads", str(nthreads),
         "-strides", "1,2,3,4",
