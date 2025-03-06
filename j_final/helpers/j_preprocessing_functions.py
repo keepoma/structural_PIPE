@@ -12,22 +12,12 @@ def convert_scans(paths, nthreads):
     """
     Convert anatomical and diffusion scans into standardized NIfTI or MIF formats.
     """
-
     # Helper lambda for paths from the one_raw directory
-    anat_path = lambda subpath: os.path.join(paths["anat_dir"], subpath)
     for filename in os.listdir(paths["anat_dir"]):
         if re.search(r'T1w\.nii\.gz', filename):
             t1_nii = os.path.join(paths["anat_dir"], filename)
 
     t1_mif = os.path.join(paths["anat_dir"], "t1.mif")
-
-    # Convert T1 scan
-    run_cmd([
-        "mrconvert", "-nthreads", str(nthreads),
-        "-strides", "1,2,3",
-        paths["anat_dir"], t1_nii,
-        "-force"
-    ])
     run_cmd([
         "mrconvert", "-nthreads", str(nthreads),
         "-strides", "1,2,3",
@@ -41,10 +31,11 @@ def convert_scans(paths, nthreads):
         if re.search(r'AP\.nii\.gz', filename):
             dwi_ap = os.path.join(paths["dwi_dir"], filename)
 
+    dwi_ap_mif = os.path.join(paths["dwi_dir"], "dwi_ap.mif")
     run_cmd([
         "mrconvert", "-nthreads", str(nthreads),
         "-strides", "1,2,3,4",
-        dwi_ap, os.path.join(paths["five_dwi"], "dwi_ap.mif"),
+        dwi_ap, dwi_ap_mif,
         "-force"
     ])
 
@@ -53,10 +44,11 @@ def convert_scans(paths, nthreads):
         if re.search(r'PA\.nii\.gz', filename):
             dwi_pa = os.path.join(paths["dwi_dir"], filename)
 
+    dwi_pa_mif = os.path.join(paths["dwi_dir"], "dwi_pa.mif")
     run_cmd([
         "mrconvert", "-nthreads", str(nthreads),
         "-strides", "1,2,3,4",
-        dwi_pa, os.path.join(paths["five_dwi"], "dwi_pa.mif"),
+        dwi_pa, dwi_pa_mif,
         "-force"
     ])
 
@@ -74,7 +66,6 @@ def preprocess_dwi(paths, nthreads):
       - Skull stripping
     """
 
-    # Helper lambda for paths in the 5_dwi folder
     dwi_path = lambda subpath: os.path.join(paths["dwi_dir"], subpath)
 
     # Combine AP and PA scans
