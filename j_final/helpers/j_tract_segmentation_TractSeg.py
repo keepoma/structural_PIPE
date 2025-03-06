@@ -9,19 +9,21 @@ to be skipped
 """
 
 
-def tract_and_endings_segmentation_TOMs(paths, session_dir):
+def tract_and_endings_segmentation_TOMs(paths):
     """
     Runs tract segmentation, endings segmentation, and generates tract orientation maps.
     """
 
     # Helper lambda for paths in the 5_dwi folder
-    peaks_path_group_RF = os.path.join(paths["dwi_dir"], "fod_peaks_group_RF.nii.gz")
+    peaks_path_group_rf = os.path.join(paths["dwi_dir"], "fod_peaks_group_RF.nii.gz")
+
+    output_dir = paths["tractseg_dir"]
+    os.makedirs(output_dir, exist_ok=True)
 
     # Tract segmentation
-    output_dir = os.path.join(session_dir, "tractseg_output")
     run_cmd([
         "TractSeg",
-        "-i", peaks_path_group_RF,
+        "-i", peaks_path_group_rf,
         "-o", output_dir,
         "--output_type", "tract_segmentation"
     ])
@@ -29,7 +31,7 @@ def tract_and_endings_segmentation_TOMs(paths, session_dir):
     # Endings segmentation
     run_cmd([
         "TractSeg",
-        "-i", peaks_path_group_RF,
+        "-i", peaks_path_group_rf,
         "-o", output_dir,
         "--output_type", "endings_segmentation"
     ])
@@ -37,13 +39,13 @@ def tract_and_endings_segmentation_TOMs(paths, session_dir):
     #  Tract Orientation Maps
     run_cmd([
         "TractSeg",
-        "-i", peaks_path_group_RF,
+        "-i", peaks_path_group_rf,
         "-o", output_dir,
         "--output_type", "TOM"
     ])
 
 
-def tractography_resample_and_extract_metrics(session_dir, nthreads):
+def tractography_resample_and_extract_metrics(paths, nthreads):
     """
     Process a single subject by looping through each tract.
     """
@@ -53,30 +55,32 @@ def tractography_resample_and_extract_metrics(session_dir, nthreads):
     tract_names_file = os.path.join(script_dir, "helpers", "tract_name.txt")
     tract_names = pd.read_csv(tract_names_file, header=None)[0].tolist()
 
+    output_dir = paths["tractseg_dir"]
+
     for tract_name in tract_names:
 
         # Build file paths for segmentation files and outputs
-        bundle_path = os.path.join(session_dir, "tractseg_output", "bundle_segmentations",
+        bundle_path = os.path.join(output_dir, "bundle_segmentations",
                                    f"{tract_name}.nii.gz")
-        bundle_b_path = os.path.join(session_dir, "tractseg_output", "endings_segmentations",
+        bundle_b_path = os.path.join(output_dir, "endings_segmentations",
                                      f"{tract_name}_b.nii.gz")
-        bundle_e_path = os.path.join(session_dir, "tractseg_output", "endings_segmentations",
+        bundle_e_path = os.path.join(output_dir, "endings_segmentations",
                                      f"{tract_name}_e.nii.gz")
 
         # Output tracking paths
-        tracking_dir = os.path.join(session_dir, "tractseg_output", "FOD_iFOD2_trackings")
+        tracking_dir = os.path.join(output_dir, "FOD_iFOD2_trackings")
         os.makedirs(tracking_dir, exist_ok=True)
         tck_path = os.path.join(tracking_dir, f"{tract_name}.tck")
         tck_n100_path = os.path.join(tracking_dir, f"{tract_name}_N100.tck")
 
         # Along-tract output directory with 3 subdirectories for each metric
-        along_dir = os.path.join(session_dir, "along_tract")
+        along_dir = paths["at_dir"]
         os.makedirs(along_dir, exist_ok=True)
-        adc_dir = os.path.join(session_dir, "along_tract", "ADC")
+        adc_dir = os.path.join(paths["at_dir"], "ADC")
         os.makedirs(adc_dir, exist_ok=True)
-        fa_dir = os.path.join(session_dir, "along_tract", "FA")
+        fa_dir = os.path.join(paths["at_dir"], "FA")
         os.makedirs(fa_dir, exist_ok=True)
-        peaks_dir = os.path.join(session_dir, "along_tract", "peaks")
+        peaks_dir = os.path.join(paths["at_dir"], "peaks")
         os.makedirs(peaks_dir, exist_ok=True)
         adc_csv = os.path.join(adc_dir, f"{tract_name}_adc.csv")
         adc_n100_csv = os.path.join(adc_dir, f"{tract_name}_n100_adc.csv")
@@ -84,10 +88,9 @@ def tractography_resample_and_extract_metrics(session_dir, nthreads):
         fa_n100_csv = os.path.join(fa_dir, f"{tract_name}_n100_fa.csv")
         peaks_txt = os.path.join(peaks_dir, f"{tract_name}_peaks.txt")
         peaks_n100_txt = os.path.join(peaks_dir, f"{tract_name}_n100_peaks.txt")
-        wmrf_group_norm = os.path.join(session_dir, "dwi", "wm_group_average_based_norm.mif")
+        wmrf_group_norm = os.path.join(paths["dwi_dir"], "wm_group_average_based_norm.mif")
 
         # Track generation using tckgen
-        # Changed cutoff to 0.1 and implemented -seed_unidirectional
         run_cmd([
             "tckgen",
             "-algorithm", "iFOD2",
@@ -117,10 +120,11 @@ def tractography_resample_and_extract_metrics(session_dir, nthreads):
         ])
 
         # Sample ADC values along original and resampled tract
+        adc_mif = os.path.join(paths["dwi"], "adc.mif"),
         run_cmd([
             "tcksample",
             tck_path,
-            os.path.join(session_dir, "dwi", "adc.mif"),
+            adc_mif,
             adc_csv,
             "-force"
         ])
@@ -128,16 +132,18 @@ def tractography_resample_and_extract_metrics(session_dir, nthreads):
         run_cmd([
             "tcksample",
             tck_n100_path,
-            os.path.join(session_dir, "dwi", "adc.mif"),
+            adc_mif,
             adc_n100_csv,
             "-force"
         ])
 
         # Sample FA values along the tract
+        fa_mif = os.path.join(paths["dwi"], "fa.mif"),
+
         run_cmd([
             "tcksample",
             tck_path,
-            os.path.join(session_dir, "dwi", "fa.mif"),
+            fa_mif,
             fa_csv,
             "-force"
         ])
@@ -145,13 +151,12 @@ def tractography_resample_and_extract_metrics(session_dir, nthreads):
         run_cmd([
             "tcksample",
             tck_n100_path,
-            os.path.join(session_dir, "dwi", "fa.mif"),
+            fa_mif,
             fa_n100_csv,
             "-force"
         ])
 
         # Peaks along tract
-        paths = get_subject_paths(session_dir)
         peaks_path_group_RF = os.path.join(paths["dwi_dir"], "fod_peaks_group_RF.nii.gz")
 
         run_cmd([
@@ -178,7 +183,7 @@ def tractseg_tracking_and_tractometry(root, paths, session_dir):
 
     peaks_path_individual_RF = os.path.join(paths["dwi_dir"], "fod_peaks_individual_RF.nii.gz")
     peaks_path_group_RF = os.path.join(paths["dwi_dir"], "fod_peaks_group_RF.nii.gz")
-    tractseg_output = os.path.join(paths["dwi_dir"])
+    tractseg_output = os.path.join(paths["tractseg_dir"])
 
     run_cmd([
         "Tracking",

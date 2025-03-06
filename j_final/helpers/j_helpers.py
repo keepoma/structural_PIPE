@@ -20,15 +20,14 @@ def get_subject_paths(session_dir):
     """
 
     paths = {
+        "session_dir": session_dir,
         "anat_dir": os.path.join(session_dir, "anat"),
         "dwi_dir": os.path.join(session_dir, "dwi"),
         "fmap_dir": os.path.join(session_dir, "fmap"),
         "func_dir": os.path.join(session_dir, "func"),
-        "mat_dir": os.path.join(session_dir, "mat"),
-        "tck_dir": os.path.join(session_dir, "tck"),
-        "atlas_dir": os.path.join(session_dir, "atlas"),
-        "connectome_dir": os.path.join(session_dir, "connectome"),
-        "tractseg_dir": os.path.join(session_dir, "tractseg_output")
+        "tractseg_dir": os.path.join(session_dir, "tractseg_output"),
+        "at_dir": os.path.join(session_dir, "along_tract")
+
     }
     return paths
 
