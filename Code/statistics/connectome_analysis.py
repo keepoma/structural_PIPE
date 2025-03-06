@@ -3,10 +3,10 @@ import os
 import networkx as nx
 import csv
 from scipy import stats
-from Code.helpers.helpers import get_subject_dirs, get_subject_paths
-from Code.helpers.statistical_helpers import (lookup_dictionary, threshold_matrix_by_weight,
+from helpers.helpers import get_subject_dirs, get_subject_paths
+from helpers.statistical_helpers import (lookup_dictionary, threshold_matrix_by_weight,
                                          threshold_matrix_by_clipping, create_graph,
-                                         load_node_metrics_as_dataframe)
+                                         load_node_metrics_as_dataframe, chose_workspace)
 from connectome_visualization import (visualize_matrix_weights, visualize_saved_metrics,
                                       plot_metric_boxplot, plot_metric_violin,
                                       visualize_matrix_comparison)
@@ -234,27 +234,7 @@ def find_top_nodes_by_strength(matrix, lookup_path, top_n=10):
 
 def connectome_analysis_pipe(workspace):
 
-    # Getting custom user input
-    if workspace == 1:
-        root = "/Users/nikitakaruzin/Desktop/Research/Picht/my_brain"
-        sc_path = "/Users/nikitakaruzin/Desktop/Research/Picht/my_brain/me/atlas/hcpmmp1.csv"
-        lookup_path = "/Users/nikitakaruzin/MRI/projects/BATMAN/DWI/hcpmmp1_ordered.txt"
-    elif workspace == 2 or '2':
-        root = "/home/nikita/Nikita_MRI"
-        sc_path = "/home/nikita/Nikita_MRI/me/atlas/hcpmmp1.csv"
-        lookup_path = "/home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_ordered.txt"
-    elif workspace == 3:
-        # HPC subjects
-        root = input("Root: ")
-        subject_dirs = get_subject_dirs(root)
-        for index, directory in enumerate(subject_dirs, start=1):
-            print(f"{index}. {directory}")
-        choice = int(input("Select a directory by entering its number: "))
-        selected_directory = subject_dirs[choice - 1]  # Adjust for zero-based indexing
-        sc_path = os.path.join(root, selected_directory, "atlas", "hcpmmp1.csv")
-        lookup_path = "/home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_ordered.txt"
-    else:
-        raise ValueError("Unknown workspace value provided. Please choose 1, 2, or 3.")
+    root, sc_path, lookup_path = workspace(workspace)
 
     matrix = np.genfromtxt(sc_path, delimiter=',')
 
