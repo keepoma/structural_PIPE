@@ -16,6 +16,7 @@ def convert_scans(paths, nthreads):
     for filename in os.listdir(paths["anat_dir"]):
         if re.search(r'T1w\.nii\.gz', filename):
             t1_nii = os.path.join(paths["anat_dir"], filename)
+            break
 
     t1_mif = os.path.join(paths["anat_dir"], "t1.mif")
     run_cmd([
@@ -27,30 +28,72 @@ def convert_scans(paths, nthreads):
     ])
 
     # Convert dMRI AP scan
-    for filename in os.listdir(paths["dwi_dir"]):
-        if re.search(r'AP\.nii\.gz', filename):
-            dwi_ap = os.path.join(paths["dwi_dir"], filename)
+    dwi_ap_nii = None
+    dwi_ap_bvec = None
+    dwi_ap_bval = None
+    dwi_ap_json = None
 
-    dwi_ap_mif = os.path.join(paths["dwi_dir"], "dwi_ap.mif")
-    run_cmd([
-        "mrconvert", "-nthreads", str(nthreads),
-        "-strides", "1,2,3,4",
-        dwi_ap, dwi_ap_mif,
-        "-force"
-    ])
+    for filename in os.listdir(paths["dwi_dir"]):
+        full_path = os.path.join(paths["dwi_dir"], filename)
+        if re.search(r'AP\.nii\.gz$', filename):
+            dwi_ap_nii = full_path
+        elif re.search(r'AP\.bvec$', filename):
+            dwi_ap_bvec = full_path
+        elif re.search(r'AP\.bval$', filename):
+            dwi_ap_bval = full_path
+        elif re.search(r'AP\.json$', filename):
+            dwi_ap_json = full_path
+
+    if dwi_ap_nii is not None:
+        dwi_ap_mif = os.path.join(paths["dwi_dir"], "dwi_ap.mif")
+        mrconvert_cmd = [
+            "mrconvert", "-nthreads", str(nthreads),
+            "-strides", "1,2,3,4",
+            dwi_ap_nii,
+            dwi_ap_mif,
+            "-force"
+        ]
+        # Embed diffusion gradients if present
+        if dwi_ap_bvec and dwi_ap_bval:
+            mrconvert_cmd += ["-fslgrad", dwi_ap_bvec, dwi_ap_bval]
+        # Embed BIDS JSON if present
+        if dwi_ap_json:
+            mrconvert_cmd += ["-json_import", dwi_ap_json]
+
+        run_cmd(mrconvert_cmd)
 
     # Convert dMRI PA scan
-    for filename in os.listdir(paths["dwi_dir"]):
-        if re.search(r'PA\.nii\.gz', filename):
-            dwi_pa = os.path.join(paths["dwi_dir"], filename)
+    dwi_pa_nii = None
+    dwi_pa_bvec = None
+    dwi_pa_bval = None
+    dwi_pa_json = None
 
-    dwi_pa_mif = os.path.join(paths["dwi_dir"], "dwi_pa.mif")
-    run_cmd([
-        "mrconvert", "-nthreads", str(nthreads),
-        "-strides", "1,2,3,4",
-        dwi_pa, dwi_pa_mif,
-        "-force"
-    ])
+    for filename in os.listdir(paths["dwi_dir"]):
+        full_path = os.path.join(paths["dwi_dir"], filename)
+        if re.search(r'PA\.nii\.gz$', filename):
+            dwi_pa_nii = full_path
+        elif re.search(r'PA\.bvec$', filename):
+            dwi_pa_bvec = full_path
+        elif re.search(r'PA\.bval$', filename):
+            dwi_pa_bval = full_path
+        elif re.search(r'PA\.json$', filename):
+            dwi_pa_json = full_path
+
+    if dwi_pa_nii is not None:
+        dwi_pa_mif = os.path.join(paths["dwi_dir"], "dwi_pa.mif")
+        mrconvert_cmd = [
+            "mrconvert", "-nthreads", str(nthreads),
+            "-strides", "1,2,3,4",
+            dwi_pa_nii,
+            dwi_pa_mif,
+            "-force"
+        ]
+        if dwi_pa_bvec and dwi_pa_bval:
+            mrconvert_cmd += ["-fslgrad", dwi_pa_bvec, dwi_pa_bval]
+        if dwi_pa_json:
+            mrconvert_cmd += ["-json_import", dwi_pa_json]
+
+        run_cmd(mrconvert_cmd)
 
 
 def preprocess_dwi(paths, nthreads):
@@ -139,7 +182,8 @@ def response_function(paths, nthreads):
     """
 
     # Helper lambda for constructing file paths
-    dwi_path = lambda subpath: os.path.join(paths["dwi_path"], subpath)
+    dwi_path = lambda subpath: os.path.join(paths["dwi_dir"], subpath)
+
 
     run_cmd([
         "dwi2response", "-nthreads", str(nthreads),

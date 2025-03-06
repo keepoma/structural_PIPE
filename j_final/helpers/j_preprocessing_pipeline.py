@@ -1,7 +1,7 @@
 import os
 from . import j_preprocessing_functions as preproc
 from .j_helpers import (get_subject_paths, get_subject_dirs, fancy_print)
-from .j_registration import register_t1_and_5tt_to_dwi
+from .j_registration import register_t1_to_dwi
 
 
 """
@@ -10,14 +10,14 @@ Supposed to be imported and built upon.
 """
 
 
-def preprocessing_pipeline(root, nthreads, do_hsvs):
+def preprocessing_pipeline(root, nthreads):
     subject_dirs = get_subject_dirs(root)
 
     for subj_dir in subject_dirs:
         for session in ['ses_pre', 'ses_post']:
             session_dir = os.path.join(subj_dir, session)
             paths = get_subject_paths(session_dir)
-            subj_ses = subj_dir +' '+ session
+            subj_ses = subj_dir + ' ' + session
             fancy_print("Converting Scans", subj_ses)
             preproc.convert_scans(paths, nthreads)
             fancy_print("Preprocessing dMRI Data", subj_ses)
@@ -35,7 +35,7 @@ def preprocessing_pipeline(root, nthreads, do_hsvs):
         for session in ['ses_pre', 'ses_post']:
             session_dir = os.path.join(subj_dir, session)
             paths = get_subject_paths(session_dir)
-            subj_ses = subj_dir +' '+ session_dir
+            subj_ses = subj_dir + ' ' + session_dir
             fancy_print("Performing FOD and normalization", subj_ses)
             preproc.FOD_normalization_peaks(paths, root, nthreads)
 
@@ -44,5 +44,5 @@ def preprocessing_pipeline(root, nthreads, do_hsvs):
             session_dir = os.path.join(subj_dir, session)
             paths = get_subject_paths(session_dir)
             subj_ses = subj_dir +' '+ session_dir
-            fancy_print("Registering T1 and 5tt to dMRI Space", subj_ses)
-            register_t1_and_5tt_to_dwi(paths, nthreads, do_hsvs)
+            fancy_print("Registering T1 to dMRI Space", subj_ses)
+            register_t1_to_dwi(paths, nthreads)

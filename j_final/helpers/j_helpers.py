@@ -25,6 +25,7 @@ def get_subject_paths(session_dir):
         "dwi_dir": os.path.join(session_dir, "dwi"),
         "fmap_dir": os.path.join(session_dir, "fmap"),
         "func_dir": os.path.join(session_dir, "func"),
+        "mat_dir": os.path.join(session_dir, "matrix"),
         "tractseg_dir": os.path.join(session_dir, "tractseg_output"),
         "at_dir": os.path.join(session_dir, "along_tract")
 
