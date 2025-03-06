@@ -7,7 +7,7 @@ This script contains general purpose importable preprocessing functions
 """
 
 
-def convert_scans(paths, nthreads, t1_folder, t2_folder, t2_df_folder, dwi_ap_folder, dwi_pa_folder):
+def convert_scans(session_dir, nthreads, t1_folder, t2_folder, t2_df_folder, dwi_ap_folder, dwi_pa_folder):
     """
     Convert anatomical and diffusion scans into standardized NIfTI or MIF formats.
     """

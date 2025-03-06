@@ -14,16 +14,17 @@ def run_cmd(cmd):
     subprocess.run(cmd, check=True)
 
 
-def get_subject_paths(subject_dir):
+def get_subject_paths(subject_dir, session):
     """
     Returns a dictionary of standardized paths for the given subject directory.
     """
 
+    session_path = os.path.join(subject_dir, session)
     paths = {
-        "raw_dir": os.path.join(subject_dir, "raw"),
-        "one_raw": os.path.join(subject_dir, "raw", "1_raw"),
-        "two_nifti": os.path.join(subject_dir, "raw", "2_nifti"),
-        "five_dwi": os.path.join(subject_dir, "raw", "5_dwi"),
+        "anat_dir": os.path.join(session_path, "anat"),
+        "dwi_dir": os.path.join(session_path, "dwi"),
+        "fmap_dir": os.path.join(session_path, "fmap"),
+        "func_dir": os.path.join(session_path, "func"),
         "mat_dir": os.path.join(subject_dir, "mat"),
         "tck_dir": os.path.join(subject_dir, "tck"),
         "atlas_dir": os.path.join(subject_dir, "atlas"),
