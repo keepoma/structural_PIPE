@@ -9,7 +9,8 @@ from helpers.statistical_helpers import (lookup_dictionary, threshold_matrix_by_
                                          load_node_metrics_as_dataframe, chose_workspace)
 from connectome_visualization import (visualize_matrix_weights, visualize_saved_metrics,
                                       plot_metric_boxplot, plot_metric_violin,
-                                      visualize_matrix_comparison)
+                                      visualize_matrix_comparison, visualize_matrix,
+                                      visualize_matrix_side_by_side)
 
 
 def global_reaching_centrality(graph, centrality_func=nx.degree_centrality):
@@ -234,7 +235,7 @@ def find_top_nodes_by_strength(matrix, lookup_path, top_n=10):
 
 def connectome_analysis_pipe(workspace):
 
-    root, sc_path, lookup_path = workspace(workspace)
+    root, sc_path, lookup_path = chose_workspace(workspace)
 
     matrix = np.genfromtxt(sc_path, delimiter=',')
 
@@ -319,10 +320,8 @@ def connectome_analysis_pipe(workspace):
 
 
 def main():
-    workspace = input("1) Laptop 2) HPC me 3) HPC subjects: ")
-    connectome_analysis_pipe(workspace)
+    visualize_matrix_side_by_side("/Users/nikitakaruzin/Desktop/Research/Picht/my_brain/me/atlas/hcpmmp1.csv")
 
 
 if __name__ == "__main__":
     main()
-

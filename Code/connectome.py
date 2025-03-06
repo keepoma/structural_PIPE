@@ -15,7 +15,8 @@ def connectome_generation(paths, nthreads):
 
     tckgen_output = os.path.join(paths["tck_dir"], "tracks_10mio_minmax_restricted.tck")
     parcels_coreg = os.path.join(paths["atlas_dir"], "hcpmmp1_parcels_coreg.mif")
-    connectome_csv = os.path.join(paths["atlas_dir"], "hcpmmp1_scale_length.csv")
+    connectome_scale_inv_length_csv = os.path.join(paths["atlas_dir"], "hcpmmp1_scale_invlength.csv")
+    connectome_minmax_rest_csv = os.path.join(paths["atlas_dir"], "hcpmmp1_minmax_rest.csv")
     assignments_csv = os.path.join(paths["atlas_dir"], "assignments_hcpmmp1_scale_length.csv")
     sift2_output = os.path.join(paths["tck_dir"], "sift2weights.csv")
     # Parcels no coreg is experimental
@@ -38,10 +39,22 @@ def connectome_generation(paths, nthreads):
         "-tck_weights_in", sift2_output,
         tckgen_output,
         parcels_coreg,
-        connectome_csv,
+        connectome_scale_inv_length_csv,
         "-out_assignment", assignments_csv,
         "-symmetric", "-zero_diagonal",
         "-scale_invlength",
+        "-nthreads", str(nthreads),
+        "-force"
+    ])
+
+    run_cmd([
+        "tck2connectome",
+        "-tck_weights_in", sift2_output,
+        tckgen_output,
+        parcels_coreg,
+        connectome_minmax_rest_csv,
+        "-out_assignment", assignments_csv,
+        "-symmetric", "-zero_diagonal",
         "-nthreads", str(nthreads),
         "-force"
     ])
