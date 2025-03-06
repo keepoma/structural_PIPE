@@ -9,16 +9,16 @@ to be skipped
 """
 
 
-def tract_and_endings_segmentation_TOMs(paths, subject_dir):
+def tract_and_endings_segmentation_TOMs(paths, session_dir):
     """
     Runs tract segmentation, endings segmentation, and generates tract orientation maps.
     """
 
     # Helper lambda for paths in the 5_dwi folder
-    peaks_path_group_RF = os.path.join(paths["two_nifti"], "fod_peaks_group_RF.nii.gz")
+    peaks_path_group_RF = os.path.join(paths["dwi_dir"], "fod_peaks_group_RF.nii.gz")
 
     # Tract segmentation
-    output_dir = os.path.join(subject_dir, "tractseg_output")
+    output_dir = os.path.join(session_dir, "tractseg_output")
     run_cmd([
         "TractSeg",
         "-i", peaks_path_group_RF,
@@ -43,7 +43,7 @@ def tract_and_endings_segmentation_TOMs(paths, subject_dir):
     ])
 
 
-def tractography_resample_and_extract_metrics(subj_dir, nthreads):
+def tractography_resample_and_extract_metrics(session_dir, nthreads):
     """
     Process a single subject by looping through each tract.
     """
@@ -56,27 +56,27 @@ def tractography_resample_and_extract_metrics(subj_dir, nthreads):
     for tract_name in tract_names:
 
         # Build file paths for segmentation files and outputs
-        bundle_path = os.path.join(subj_dir, "tractseg_output", "bundle_segmentations",
+        bundle_path = os.path.join(session_dir, "tractseg_output", "bundle_segmentations",
                                    f"{tract_name}.nii.gz")
-        bundle_b_path = os.path.join(subj_dir, "tractseg_output", "endings_segmentations",
+        bundle_b_path = os.path.join(session_dir, "tractseg_output", "endings_segmentations",
                                      f"{tract_name}_b.nii.gz")
-        bundle_e_path = os.path.join(subj_dir, "tractseg_output", "endings_segmentations",
+        bundle_e_path = os.path.join(session_dir, "tractseg_output", "endings_segmentations",
                                      f"{tract_name}_e.nii.gz")
 
         # Output tracking paths
-        tracking_dir = os.path.join(subj_dir, "tractseg_output", "FOD_iFOD2_trackings")
+        tracking_dir = os.path.join(session_dir, "tractseg_output", "FOD_iFOD2_trackings")
         os.makedirs(tracking_dir, exist_ok=True)
         tck_path = os.path.join(tracking_dir, f"{tract_name}.tck")
-        tck_N100 = os.path.join(tracking_dir, f"{tract_name}_N100.tck")
+        tck_n100_path = os.path.join(tracking_dir, f"{tract_name}_N100.tck")
 
         # Along-tract output directory with 3 subdirectories for each metric
-        along_dir = os.path.join(subj_dir, "along_tract")
+        along_dir = os.path.join(session_dir, "along_tract")
         os.makedirs(along_dir, exist_ok=True)
-        adc_dir = os.path.join(subj_dir, "along_tract", "ADC")
+        adc_dir = os.path.join(session_dir, "along_tract", "ADC")
         os.makedirs(adc_dir, exist_ok=True)
-        fa_dir = os.path.join(subj_dir, "along_tract", "FA")
+        fa_dir = os.path.join(session_dir, "along_tract", "FA")
         os.makedirs(fa_dir, exist_ok=True)
-        peaks_dir = os.path.join(subj_dir, "along_tract", "peaks")
+        peaks_dir = os.path.join(session_dir, "along_tract", "peaks")
         os.makedirs(peaks_dir, exist_ok=True)
         adc_csv = os.path.join(adc_dir, f"{tract_name}_adc.csv")
         adc_n100_csv = os.path.join(adc_dir, f"{tract_name}_n100_adc.csv")
@@ -84,7 +84,7 @@ def tractography_resample_and_extract_metrics(subj_dir, nthreads):
         fa_n100_csv = os.path.join(fa_dir, f"{tract_name}_n100_fa.csv")
         peaks_txt = os.path.join(peaks_dir, f"{tract_name}_peaks.txt")
         peaks_n100_txt = os.path.join(peaks_dir, f"{tract_name}_n100_peaks.txt")
-        wmrf_group_norm = os.path.join(subj_dir, "raw", "5_dwi", "wm_group_average_based_norm.mif")
+        wmrf_group_norm = os.path.join(session_dir, "dwi", "wm_group_average_based_norm.mif")
 
         # Track generation using tckgen
         # Changed cutoff to 0.1 and implemented -seed_unidirectional
@@ -111,7 +111,7 @@ def tractography_resample_and_extract_metrics(subj_dir, nthreads):
             "tckresample",
             tck_path,
             "-num_points", "100",
-            tck_N100,
+            tck_n100_path,
             "-nthreads", str(nthreads),
             "-force"
         ])
@@ -120,15 +120,15 @@ def tractography_resample_and_extract_metrics(subj_dir, nthreads):
         run_cmd([
             "tcksample",
             tck_path,
-            os.path.join(subj_dir, "raw", "5_dwi", "adc.mif"),
+            os.path.join(session_dir, "dwi", "adc.mif"),
             adc_csv,
             "-force"
         ])
 
         run_cmd([
             "tcksample",
-            tck_N100,
-            os.path.join(subj_dir, "raw", "5_dwi", "adc.mif"),
+            tck_n100_path,
+            os.path.join(session_dir, "dwi", "adc.mif"),
             adc_n100_csv,
             "-force"
         ])
@@ -137,22 +137,22 @@ def tractography_resample_and_extract_metrics(subj_dir, nthreads):
         run_cmd([
             "tcksample",
             tck_path,
-            os.path.join(subj_dir, "raw", "5_dwi", "fa.mif"),
+            os.path.join(session_dir, "dwi", "fa.mif"),
             fa_csv,
             "-force"
         ])
 
         run_cmd([
             "tcksample",
-            tck_N100,
-            os.path.join(subj_dir, "raw", "5_dwi", "fa.mif"),
+            tck_n100_path,
+            os.path.join(session_dir, "dwi", "fa.mif"),
             fa_n100_csv,
             "-force"
         ])
 
         # Peaks along tract
-        paths = get_subject_paths(subj_dir)
-        peaks_path_group_RF = os.path.join(paths["two_nifti"], "fod_peaks_group_RF.nii.gz")
+        paths = get_subject_paths(session_dir)
+        peaks_path_group_RF = os.path.join(paths["dwi_dir"], "fod_peaks_group_RF.nii.gz")
 
         run_cmd([
             "tcksample",
@@ -164,23 +164,22 @@ def tractography_resample_and_extract_metrics(subj_dir, nthreads):
 
         run_cmd([
             "tcksample",
-            tck_N100,
+            tck_n100_path,
             peaks_path_group_RF,
             peaks_n100_txt,
             "-force"
         ])
 
 
-def tractseg_tracking_and_tractometry(root, paths, subj_dir):
+def tractseg_tracking_and_tractometry(root, paths, session_dir):
     """
     Implementing tractsegts own Tractometry as an alternative/conjunction to iFOD2
     """
 
-    peaks_path_individual_RF = os.path.join(paths["two_nifti"], "fod_peaks_individual_RF.nii.gz")
-    peaks_path_group_RF = os.path.join(paths["two_nifti"], "fod_peaks_group_RF.nii.gz")
-    tractseg_output = os.path.join(paths["tractseg_dir"])
+    peaks_path_individual_RF = os.path.join(paths["dwi_dir"], "fod_peaks_individual_RF.nii.gz")
+    peaks_path_group_RF = os.path.join(paths["dwi_dir"], "fod_peaks_group_RF.nii.gz")
+    tractseg_output = os.path.join(paths["dwi_dir"])
 
-    # Tracking -i '/media/nas/nikita/test_study2_1sub/test_302/raw/2_nifti/fod_peaks_group_RF.nii.gz' -o tractseg_output --nr_fibers 5000
     run_cmd([
         "Tracking",
         "-i", peaks_path_group_RF,
@@ -188,17 +187,16 @@ def tractseg_tracking_and_tractometry(root, paths, subj_dir):
         "--nr_fibers", "5000"
     ])
 
-    subject_id = os.path.basename(subj_dir)
+    subject_id = os.path.basename(session_dir)
     tractseg_tractometry_dir = os.path.join(root, "group_analysis", "tractseg_tractometry")
     os.makedirs(tractseg_tractometry_dir, exist_ok=True)
     subj_tractseg_tractometry_dir = os.path.join(tractseg_tractometry_dir, subject_id)
     os.makedirs(subj_tractseg_tractometry_dir, exist_ok=True)
     tom_trackings = os.path.join(tractseg_output, "TOM_trackings")
     tractseg_tractometry_output = os.path.join(subj_tractseg_tractometry_dir, f"Tractometry.csv")
-    bundle_e_path = os.path.join(subj_dir, "tractseg_output", "endings_segmentations")
-    fa_output_nii = os.path.join(paths["five_dwi"], "fa.nii.gz")
+    bundle_e_path = os.path.join(session_dir, "tractseg_output", "endings_segmentations")
+    fa_output_nii = os.path.join(paths["dwi_dir"], "fa.nii.gz")
 
-    #Tractometry -i TOM_trackings/ -o Tractometry_subject1.csv -e endings_segmentations/ -s '/media/nas/nikita/test_study2_1sub/test_302/raw/5_dwi/fa.nii.gz'
     run_cmd([
         "Tractometry",
         "-i", tom_trackings,
@@ -206,27 +204,3 @@ def tractseg_tracking_and_tractometry(root, paths, subj_dir):
         "-e", bundle_e_path,
         "-s", fa_output_nii
     ])
-
-def process_all_subjects(root, tract_names_file, nthreads=max(4, os.cpu_count() - 50)):
-    """
-    Process all subject directories under the root directory.
-    """
-
-    # Load tract names from the CSV file; expecting one tract name per row (without header)
-    tract_names = pd.read_csv(tract_names_file, header=None)[0].tolist()
-
-    # Loop over each subject (only directories) in the given root
-    subject_paths = glob.glob(os.path.join(root, '*'))
-    for subject_path in subject_paths:
-        if os.path.isdir(subject_path):
-            print(f"\n===== Applying segmentation: {subject_path} =====")
-            tractography_resample_and_extract_metrics(subject_path, tract_names, nthreads)
-
-
-def main():
-    args = get_args()
-    process_all_subjects(args.root, "helpers/tract_name.txt", args.nthreads)
-
-
-if __name__ == "__main__":
-    main()
