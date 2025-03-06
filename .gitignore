@@ -12,4 +12,5 @@ Code/helpers/__init__.py
 Code/helpers/__pycache__/
 Code/Experiments/__init__.py
 Code/myenv
-Code/dwifslpreproc-tmp-HSPXP8/
+Code/dwifslpreproc*
+DEADJOE
