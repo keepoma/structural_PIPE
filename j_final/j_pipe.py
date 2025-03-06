@@ -1,10 +1,10 @@
 import os
 import logging
-from helpers.helpers import (get_subject_paths, fancy_print,
+from helpers.j_helpers import (get_subject_paths, fancy_print,
                              get_args, get_subject_dirs,
                              logs)
-from preprocessing_pipeline import preprocessing_pipeline
-from tract_segmentation_TractSeg import (tract_and_endings_segmentation_TOMs,
+from helpers.j_preprocessing_pipeline import preprocessing_pipeline
+from helpers.j_tract_segmentation_TractSeg import (tract_and_endings_segmentation_TOMs,
                                          tractography_resample_and_extract_metrics,
                                          tractseg_tracking_and_tractometry)
 

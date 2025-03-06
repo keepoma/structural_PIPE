@@ -1,5 +1,5 @@
 import os
-from helpers.helpers import run_cmd
+from j_helpers import run_cmd
 
 
 def register_t1_and_5tt_to_dwi(paths, nthreads, do_hsvs=False):
