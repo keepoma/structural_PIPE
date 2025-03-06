@@ -14,22 +14,21 @@ def run_cmd(cmd):
     subprocess.run(cmd, check=True)
 
 
-def get_subject_paths(subject_dir, session):
+def get_subject_paths(session_dir):
     """
     Returns a dictionary of standardized paths for the given subject directory.
     """
 
-    session_path = os.path.join(subject_dir, session)
     paths = {
-        "anat_dir": os.path.join(session_path, "anat"),
-        "dwi_dir": os.path.join(session_path, "dwi"),
-        "fmap_dir": os.path.join(session_path, "fmap"),
-        "func_dir": os.path.join(session_path, "func"),
-        "mat_dir": os.path.join(subject_dir, "mat"),
-        "tck_dir": os.path.join(subject_dir, "tck"),
-        "atlas_dir": os.path.join(subject_dir, "atlas"),
-        "connectome_dir": os.path.join(subject_dir, "connectome"),
-        "tractseg_dir": os.path.join(subject_dir, "tractseg_output")
+        "anat_dir": os.path.join(session_dir, "anat"),
+        "dwi_dir": os.path.join(session_dir, "dwi"),
+        "fmap_dir": os.path.join(session_dir, "fmap"),
+        "func_dir": os.path.join(session_dir, "func"),
+        "mat_dir": os.path.join(session_dir, "mat"),
+        "tck_dir": os.path.join(session_dir, "tck"),
+        "atlas_dir": os.path.join(session_dir, "atlas"),
+        "connectome_dir": os.path.join(session_dir, "connectome"),
+        "tractseg_dir": os.path.join(session_dir, "tractseg_output")
     }
     return paths
 
@@ -78,21 +77,6 @@ def prompt_for_folder(default, description):
     user_input = input(f"Enter folder name for {description} [default: {default}] (press Enter for default): ").strip()
     return user_input if user_input else default
 
-
-def ask_yes_no(question):
-    """
-    Prompt the user with a yes/no question until
-    they enter a valid response. Returns True or False
-    """
-
-    while True:
-        answer = input(question + " [y/n]: ").strip().lower()
-        if answer in ("y", "yes"):
-            return True
-        elif answer in ("n", "no"):
-            return False
-        else:
-            print("Invalid input. Please type 'y' or 'n'.")
 
 def fancy_print(action, subj_dir):
     """

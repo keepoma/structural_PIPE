@@ -22,9 +22,9 @@ def main():
     preprocessing_pipeline(args.root, args.nthreads, do_hsvs=False)
 
     for subj_dir in subject_dirs:
-        paths = get_subject_paths(subj_dir)
         for session in ['ses_pre', 'ses_post']:
             session_dir = os.path.join(subj_dir, session)
+            paths = get_subject_paths(session_dir)
             subj_ses = subj_dir +' '+ session_dir
             fancy_print("Segmenting tracts, endings, and generating TOMs", subj_ses)
             tract_and_endings_segmentation_TOMs(paths, session_dir)
