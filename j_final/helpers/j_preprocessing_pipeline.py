@@ -1,8 +1,8 @@
 import os
-import j_preprocessing_functions as preproc
-from j_helpers import (get_subject_paths, get_subject_dirs,
+from . import j_preprocessing_functions as preproc
+from .j_helpers import (get_subject_paths, get_subject_dirs,
                              fancy_print, prompt_for_folder)
-from j_registration import register_t1_and_5tt_to_dwi
+from .j_registration import register_t1_and_5tt_to_dwi
 
 
 """

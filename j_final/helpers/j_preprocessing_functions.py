@@ -1,6 +1,6 @@
 import os
 import re
-from j_helpers import run_cmd, get_subject_dirs, get_subject_paths
+from .j_helpers import run_cmd, get_subject_dirs, get_subject_paths
 
 
 """
