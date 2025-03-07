@@ -140,6 +140,37 @@ def visualize_matrix(matrix_path, clip):
     plt.show()
 
 
+def visualize_matrix_side_by_side(matrix_path):
+    # Load the matrix from the file
+    matrix = np.loadtxt(matrix_path, delimiter=",")
+    base_title = os.path.splitext(os.path.basename(matrix_path))[0]
+
+    # Create a clipped version (using the 99th percentile as the upper bound)
+    upper_bound = np.percentile(matrix, 99)
+    matrix_clipped = np.clip(matrix, None, upper_bound)
+
+    # Create two subplots side by side
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))
+
+    # Plot the original (unclipped) matrix
+    sns.heatmap(matrix, cmap='viridis', square=True, ax=ax1, cbar_kws={'label': 'Connection Weight'})
+    ax1.set_title("Unclipped Matrix")
+    ax1.set_xlabel("Region Index")
+    ax1.set_ylabel("Region Index")
+
+    # Plot the clipped matrix
+    sns.heatmap(matrix_clipped, cmap='viridis', square=True, ax=ax2, cbar_kws={'label': 'Connection Weight'})
+    ax2.set_title("Clipped Matrix (99th Percentile)")
+    ax2.set_xlabel("Region Index")
+    ax2.set_ylabel("Region Index")
+
+    # Set an overall title for the figure
+    fig.suptitle("Comparison of Clipped and Unclipped Structural Connectivity Matrix", fontsize=16)
+
+    # Adjust layout to accommodate the overall title
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
+    plt.show()
+
 def visualize_saved_metrics(threshold_to_node_csv, threshold_to_global_csv):
     """
     Reads the saved CSV files from 'compute_metrics_for_weight_threshold_range'

@@ -1,11 +1,11 @@
 import os
 import pandas as pd
-import matplotlib.pyplot as plt
 import numpy as np
 from statsmodels.stats.multitest import multipletests
 from scipy import stats
-from Code.helpers.helpers import (run_cmd, create_tractseg_file,
+from helpers.helpers import (run_cmd, create_tractseg_file,
                                   get_subject_dirs)
+from regional_visualization import visualize_multi_peak_length_side_by_side
 
 
 def compute_mean_fa(csv_file):
@@ -33,144 +33,6 @@ def compute_mean_fa(csv_file):
     # Compute mean over the entire set of values
     mean_fa = np.mean(all_values)
     return mean_fa
-
-
-def visualize_fa(csv_file):
-    """
-    Visualizes the FA profile along a tract from a CSV file.
-    """
-
-    # Read the FA CSV file into a df
-    data = pd.read_csv(csv_file, skiprows=1, header=None, sep='\s+')
-
-    plt.figure(figsize=(10, 5))
-
-    mean_values = data.mean(axis=0)
-    std_values = data.std(axis=0)
-    x = range(1, len(mean_values) + 1)
-    plt.plot(x, mean_values, label="Mean FA", color="blue", linewidth=2)
-    plt.fill_between(x, mean_values - std_values, mean_values + std_values,
-                     color="blue", alpha=0.3, label="Std. Deviation")
-
-    plt.xlabel("Along-Tract Position (resampled)")
-    plt.ylabel("FA Value")
-    plt.title(os.path.basename(csv_file))
-    plt.legend()
-    plt.grid(True)
-    plt.show()
-
-
-def visualize_multi_fa(dirs, csv_files):
-    """
-    Visualizes multiple FA profiles in one plot
-    """
-    plt.style.use('fast')
-    plt.figure(figsize=(12, 6))
-
-    # Define colors for up to four files
-    colors = ["blue", "red", "green", "orange"]
-
-    for idx, csv_file in enumerate(csv_files):
-        data = pd.read_csv(csv_file, skiprows=1, header=None, sep='\s+')
-        mean_values = data.mean(axis=0)
-        std_values = data.std(axis=0)
-        x = range(1, len(mean_values) + 1)
-
-        color = colors[idx % len(colors)]
-        # Plot mean FA
-        plt.plot(x, mean_values, label=f"{os.path.basename(csv_file)} Mean FA", color=color, linewidth=2)
-        # Plot standard deviation as a shaded area
-        plt.fill_between(x, mean_values - std_values, mean_values + std_values,
-                         color=color, alpha=0.3, label=f"{os.path.basename(csv_file)} Std")
-
-    file_names = []
-    subject_ids = []
-    for file in csv_files:
-        file_names.append(os.path.basename(file))
-    for dir in dirs:
-        subject_ids.append(os.path.basename(dir))
-
-    plt.xlabel("Along-Tract Node Position")
-    plt.ylabel("FA Value")
-    plt.title(f"FA Profiles for {file_names[0]}, subject {subject_ids[0]} "
-              f"and {file_names[1]}, subject {subject_ids[1]}")
-    plt.legend(loc='lower left')
-    plt.grid(True)
-    plt.show()
-
-
-def visualize_peak_length(peaks_txt):
-    """
-    Generates mean peak amplitude from 2000 streamlines across 100 points
-    """
-
-    # Load data as 1D array
-    data_1d = np.loadtxt(peaks_txt)
-    n_points = 100
-    n_streamlines = 2000
-
-    # Reshape data to (n_streamlines, n_points)
-    data_2d = data_1d.reshape(n_streamlines, n_points)
-
-    # Mean and SD plot
-    mean_values = data_2d.mean(axis=0)
-    std_values = data_2d.std(axis=0)
-
-    plt.figure(figsize=(8, 5))
-    plt.plot(mean_values, label="Mean")
-    plt.fill_between(
-        np.arange(n_points),
-        mean_values - std_values,
-        mean_values + std_values,
-        alpha=0.2, label="±1 SD"
-    )
-
-    plt.title("Mean ± SD of Peak Values")
-    plt.xlabel("Node index")
-    plt.ylabel("Peak amplitude")
-    plt.legend()
-    plt.show()
-
-
-def visualize_multi_peak_length(peaks_txt_files):
-    """
-    Visualizes multiple peak amplitude profiles in one plot.
-    """
-
-    plt.style.use('fast')
-    plt.figure(figsize=(12, 6))
-    colors = ["blue", "red", "green", "orange"]
-
-    n_points = 100
-    n_streamlines = 2000
-
-    for idx, txt_file in enumerate(peaks_txt_files):
-        data_1d = np.loadtxt(txt_file)
-        # Reshape data to (n_streamlines, n_points)
-        data_2d = data_1d.reshape(n_streamlines, n_points)
-
-        mean_values = data_2d.mean(axis=0)
-        std_values = data_2d.std(axis=0)
-
-        color = colors[idx % len(colors)]
-        label_base = os.path.basename(txt_file)
-
-        # Plot the mean
-        plt.plot(mean_values, color=color, linewidth=2,
-                 label=f"{label_base} Mean")
-        # Fill ±1 SD
-        x = np.arange(n_points)
-        plt.fill_between(x, mean_values - std_values, mean_values + std_values,
-                         color=color, alpha=0.2,
-                         label=f"{label_base} ±1 SD")
-
-    plt.title("Mean ± SD of Peak Values")
-    plt.xlabel("Node Index")
-    plt.ylabel("Peak Amplitude")
-    plt.legend(loc='lower left')
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
 
 
 def process_fa_stats(root, input_file):
@@ -315,17 +177,18 @@ def plot_tractometry_results(root, bundles="AF_left AF_right CC_5 CC_6 SCP_left"
 
 
 if __name__ == "__main__":
-    root = "/media/nas/nikita/test_study2_1sub"
-    subject_dirs = get_subject_dirs(root)
+    #root = "/media/nas/nikita/test_study2_1sub"
+    #subject_dirs = get_subject_dirs(root)
     #plot_tractometry_results("/media/nas/nikita/test_study2_1sub")
 
     AF_n100_peaks = (
-        "/media/nas/nikita/test_study2_1sub/test_302/along_tract/peaks/AF_left_n100_peaks.txt",
-        "/media/nas/nikita/test_study2_1sub/test_302/along_tract/peaks/AF_right_n100_peaks.txt"
+        "/Users/nikitakaruzin/Desktop/Research/Picht/my_brain/me/along_tract/AF_left_peaks.txt",
+        "/Users/nikitakaruzin/Desktop/Research/Picht/my_brain/me/along_tract/AF_right_peaks.txt"
     )
-    #visualize_multi_peak_length(AF_peaks)
+    visualize_multi_peak_length_side_by_side(AF_n100_peaks)
 
-    AF_n100_fa_values = (
+    """
+        AF_n100_fa_values = (
         "/media/nas/nikita/test_study2_1sub/test_302/along_tract/FA/AF_left_n100_fa.csv",
         "/media/nas/nikita/test_study2_1sub/test_302/along_tract/FA/AF_right_n100_fa.csv"
     )
@@ -333,10 +196,10 @@ if __name__ == "__main__":
         "/media/nas/nikita/test_study2_1sub/test_302/along_tract/FA/AF_left_n100_fa.csv",
         "/media/nas/nikita/test_study2_1sub/test_588/along_tract/FA/AF_left_n100_fa.csv"
     )
-    #visualize_multi_fa(AF_fa_values)
-    visualize_multi_fa(
-        subject_dirs,
-        AF_n100_files_between_two_subj)
+    visualize_multi_fa(AF_fa_values)
+    visualize_multi_fa(subject_dirs, AF_n100_files_between_two_subj)
+    """
+
 
     """
     input_file_left = AF_n100_fa_values[0]
@@ -352,8 +215,8 @@ if __name__ == "__main__":
         fdr_adjust=True)
     """
 
-
-    AF_fa_values = (
+    """
+        AF_fa_values = (
         "/media/nas/nikita/test_study2_1sub/test_302/along_tract/FA/AF_left_fa.csv",
         "/media/nas/nikita/test_study2_1sub/test_302/along_tract/FA/AF_right_fa.csv"
     )
@@ -365,3 +228,5 @@ if __name__ == "__main__":
     print("mean_r_right_af", mean_r_right_af)
     print("mean_left_af", mean_left_af)
     print("mean_right_af", mean_right_af)
+    """
+
