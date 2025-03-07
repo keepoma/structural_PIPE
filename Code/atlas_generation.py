@@ -1,5 +1,5 @@
 import os
-from helpers.helpers import run_cmd, get_subject_paths
+from helpers.helpers import run_cmd, get_subject_paths, get_subject_dirs
 
 
 """
@@ -252,4 +252,10 @@ if __name__ == '__main__':
     ])
 
 
+if __name__ == '__main__':
+    subject_dirs = get_subject_dirs("/media/nas/nikita/5p_connectome")
+    for subj_dir in subject_dirs:
+        paths = get_subject_paths(subj_dir)
+        subject_id = os.path.basename(subj_dir)
+        freesurfer_atlas_generation(paths, 60, subject_id)
 
