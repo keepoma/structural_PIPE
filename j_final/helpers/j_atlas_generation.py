@@ -1,5 +1,6 @@
 import os
-from helpers.helpers import run_cmd, get_subject_paths, get_subject_dirs
+from j_helpers import run_cmd, get_subject_paths, get_subject_dirs
+import re
 
 
 """
@@ -133,7 +134,11 @@ def freesurfer_atlas_generation(paths, nthreads, subject_id):
     os.makedirs(paths["atlas_dir"], exist_ok=True)
     # Run Freesurfer's recon-all using the subject ID
     # use command rm -rf $SUBJECTS_DIR/subject_id if rerunning
-    t1_nii = os.path.join(paths["two_nifti"], "t1.nii.gz")
+    for filename in os.listdir(paths["anat_dir"]):
+        if re.search(r'T1w\.nii\.gz', filename):
+            t1_nii = os.path.join(paths["anat_dir"], filename)
+            break
+
     run_cmd([
         "recon-all",
         "-s", subject_id,
