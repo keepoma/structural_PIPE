@@ -6,6 +6,7 @@ from datetime import datetime
 
 
 def run_cmd(cmd):
+
     """
     Runs a system command via subprocess.
     Prints the command and raises an error if the command fails.

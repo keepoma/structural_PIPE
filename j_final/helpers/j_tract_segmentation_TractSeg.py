@@ -119,7 +119,7 @@ def tractography_resample_and_extract_metrics(paths, nthreads):
         ])
 
         # Sample ADC values along original and resampled tract
-        adc_mif = os.path.join(paths["dwi"], "adc.mif"),
+        adc_mif = os.path.join(paths["dwi_dir"], "adc.mif")
         run_cmd([
             "tcksample",
             tck_path,
@@ -137,7 +137,7 @@ def tractography_resample_and_extract_metrics(paths, nthreads):
         ])
 
         # Sample FA values along the tract
-        fa_mif = os.path.join(paths["dwi"], "fa.mif"),
+        fa_mif = os.path.join(paths["dwi_dir"], "fa.mif"),
 
         run_cmd([
             "tcksample",
