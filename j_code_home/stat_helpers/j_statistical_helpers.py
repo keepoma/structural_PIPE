@@ -1,34 +1,21 @@
 import os
-from Code.helpers.helpers import get_subject_dirs
 import numpy as np
 import networkx as nx
 import pandas as pd
 
 
-def chose_workspace(workspace):
-    # Getting custom user input
-    if workspace == 1:
-        root = "/Users/nikitakaruzin/Desktop/Research/Picht/my_brain"
-        sc_path = "/Users/nikitakaruzin/Desktop/Research/Picht/my_brain/me/atlas/hcpmmp1.csv"
-        lookup_path = "/Users/nikitakaruzin/MRI/projects/BATMAN/DWI/hcpmmp1_ordered.txt"
-    elif workspace == 2 or '2':
-        root = "/media/nas/nikita/nk_brain_f"
-        sc_path = "/media/nas/nikita/nk_brain_f/nk/atlas/hcpmmp1_scale_length.csv"
-        lookup_path = "/home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_ordered.txt"
-    elif workspace == 3:
-        # HPC subjects
-        root = input("Root: ")
-        subject_dirs = get_subject_dirs(root)
-        for index, directory in enumerate(subject_dirs, start=1):
-            print(f"{index}. {directory}")
-        choice = int(input("Select a directory by entering its number: "))
-        selected_directory = subject_dirs[choice - 1]  # Adjust for zero-based indexing
-        sc_path = os.path.join(root, selected_directory, "atlas", "hcpmmp1.csv")
-        lookup_path = "/home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_ordered.txt"
-    else:
-        raise ValueError("Unknown workspace value provided. Please choose 1, 2, or 3.")
+def get_subject_dirs(root):
+    """
+    Return a sorted list of subject directories excluding a specific folder
+    """
 
-    return root, sc_path, lookup_path
+    subject_dirs = sorted([
+        os.path.join(root, d)
+        for d in os.listdir(root)
+        if os.path.isdir(os.path.join(root, d)) and d not in ("group_analysis", "logs")
+    ])
+    return subject_dirs
+
 
 
 def lookup_dictionary(lookup_txt):

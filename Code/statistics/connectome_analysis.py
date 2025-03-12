@@ -3,8 +3,8 @@ import os
 import networkx as nx
 import csv
 from scipy import stats
-from helpers.helpers import get_subject_dirs, get_subject_paths
-from helpers.statistical_helpers import (lookup_dictionary, threshold_matrix_by_weight,
+#from helpers.helpers import get_subject_dirs, get_subject_paths
+from Code.helpers.statistical_helpers import (lookup_dictionary, threshold_matrix_by_weight,
                                          threshold_matrix_by_clipping, create_graph,
                                          load_node_metrics_as_dataframe, chose_workspace)
 from connectome_visualization import (visualize_matrix_weights, visualize_saved_metrics,
@@ -207,28 +207,32 @@ def find_top_edges(matrix, lookup_path, threshold=None, top_n=None):
     return labeled_edges
 
 
-def find_top_nodes_by_strength(matrix, lookup_path, top_n=10):
+def find_top_nodes_by_strength(matrix, lookup_path, top_n=None):
     """
-    Finds the nodes with the highest total connection weight.
+    Finds the nodes sorted by total connection weight.
+    If top_n is provided, returns only the top_n nodes; otherwise, returns all nodes.
     """
 
     sc = matrix
     lookup = lookup_dictionary(lookup_path)
 
-    # If the matrix is NxN, the strength of node i is the sum of row i (or column i).
+    # Calculate node strength as the sum of each row (or column)
     strengths = np.nansum(sc, axis=1)
 
-    # Create list of (node_index, strength)
+    # Create list of (node_index, strength) tuples
     indexed_strengths = list(enumerate(strengths))
 
-    # Sort descending by strength
+    # Sort the list in descending order by strength
     indexed_strengths.sort(key=lambda x: x[1], reverse=True)
 
-    # Convert to labels
-    top_nodes = []
-    for i, val in indexed_strengths[:top_n]:
-        label = lookup.get(i, f"Node_{i}")
-        top_nodes.append((label, val))
+    # If top_n is None, return all nodes, otherwise return only the top_n
+    if top_n is None:
+        selected = indexed_strengths
+    else:
+        selected = indexed_strengths[:top_n]
+
+    # Convert indices to labels
+    top_nodes = [(lookup.get(i, f"Node_{i}"), val) for i, val in selected]
 
     return top_nodes
 
@@ -260,6 +264,7 @@ def connectome_analysis_pipe(workspace):
     matrix_cut_w_mean = matrix_cut_w_mean[matrix_cut_w_mean >= threshold]
     matrix_cut_w_1std = matrix_cut_w_1std[matrix_cut_w_1std >= std]
     matrix_cut_w_2std = matrix_cut_w_2std[matrix_cut_w_2std >= 2*std]
+    """
     visualize_matrix_comparison(
         original_matrix=matrix,
         matrix_cut_w_mean=matrix_cut_w_mean,
@@ -268,6 +273,8 @@ def connectome_analysis_pipe(workspace):
         title="Comparison of Original and Thresholded Matrices",
         bins=50
     )
+    """
+
     """
     print(matrix.shape)
     print(matrix.size)
@@ -320,8 +327,8 @@ def connectome_analysis_pipe(workspace):
 
 
 def main():
-    visualize_matrix_side_by_side("/Users/nikitakaruzin/Desktop/Research/Picht/my_brain/me/atlas/hcpmmp1.csv")
-
+    #visualize_matrix_side_by_side("/Users/nikitakaruzin/Desktop/Research/Picht/my_brain/me/atlas/hcpmmp1.csv")
+    connectome_analysis_pipe(workspace="2")
 
 if __name__ == "__main__":
     main()
