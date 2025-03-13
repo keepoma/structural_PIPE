@@ -38,6 +38,26 @@ def get_subject_paths(session_dir):
     return paths
 
 
+def get_subject_paths_wo_ses(subject_dir):
+    """
+    Returns a dictionary of standardized paths for the given subject directory.
+    """
+
+    paths = {
+        "raw_dir": os.path.join(subject_dir, "raw"),
+        "one_raw": os.path.join(subject_dir, "raw", "1_raw"),
+        "two_nifti": os.path.join(subject_dir, "raw", "2_nifti"),
+        "five_dwi": os.path.join(subject_dir, "raw", "5_dwi"),
+        "mat_dir": os.path.join(subject_dir, "mat"),
+        "tck_dir": os.path.join(subject_dir, "tck"),
+        "atlas_dir": os.path.join(subject_dir, "atlas"),
+        "connectome_dir": os.path.join(subject_dir, "connectome"),
+        "tractseg_dir": os.path.join(subject_dir, "tractseg_output"),
+        "bun_stats_dir": os.path.join(subject_dir, "bundle_stats")
+    }
+    return paths
+
+
 def get_subject_dirs(root):
     """
     Return a sorted list of subject directories excluding a specific folder
@@ -116,6 +136,8 @@ def create_tractseg_file(root, tractometry_path, bundles, plot3d, output_file, g
     The second column has to be 'group' (for a group comparison; containing only 0 or 1) or
     'target' (for a correlation analysis; containing the value you want to calculate the correlation for).
     """
+    output_dir = os.path.dirname(output_file)
+    os.makedirs(output_dir, exist_ok=True)
 
     # Header lines for the subjects file.
     header_lines = [
