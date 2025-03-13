@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import seaborn as sns
 import pandas as pd
+from helpers.j_helpers import get_subject_dirs
 
-
-def visualize_matrix_weights(matrix, title, bins=50):
+def visualize_matrix_weights(matrix, bins=50):
     """
     Loads a matrix and plots a histogram of its values.
     """
@@ -25,7 +25,6 @@ def visualize_matrix_weights(matrix, title, bins=50):
 
     # Create side-by-side subplots
     fig, axs = plt.subplots(2, 2, figsize=(12, 10))
-    fig.suptitle(title, fontsize=16)
 
     # Top left: non clipped
     axs[0, 0].hist(matrix, bins=bins, edgecolor='black')
@@ -126,24 +125,19 @@ def visualize_graph(G, lookup):
     plt.show()
 
 
-def visualize_matrix(matrix_path, clip):
-    matrix = np.loadtxt(matrix_path, delimiter=",")
-    title = os.path.splitext(os.path.basename(matrix_path))[0]
+def visualize_matrix(matrix, clip):
     if clip:
         upper_bound = np.percentile(matrix, 99)
         matrix = np.clip(matrix, None, upper_bound)
     plt.figure(figsize=(10, 8))
     sns.heatmap(matrix, cmap='viridis', square=True)
-    plt.title(title)
+    plt.title("title")
     plt.xlabel('Region Index')
     plt.ylabel('Region Index')
     plt.show()
 
 
-def visualize_matrix_side_by_side(matrix_path):
-    # Load the matrix from the file
-    matrix = np.loadtxt(matrix_path, delimiter=",")
-    base_title = os.path.splitext(os.path.basename(matrix_path))[0]
+def visualize_matrix_side_by_side(matrix):
 
     # Create a clipped version (using the 99th percentile as the upper bound)
     upper_bound = np.percentile(matrix, 99)
@@ -170,6 +164,7 @@ def visualize_matrix_side_by_side(matrix_path):
     # Adjust layout to accommodate the overall title
     plt.tight_layout(rect=[0, 0, 1, 0.95])
     plt.show()
+
 
 def visualize_saved_metrics(threshold_to_node_csv, threshold_to_global_csv):
     """
@@ -276,3 +271,182 @@ def plot_metric_violin(df, metric="Degree Centrality"):
     plt.ylabel(metric)
     plt.tight_layout()
     plt.show()
+
+
+def gather_pre_post_node_data(
+        root,
+        thresh_folder="t90",
+        metric="Degree Centrality",
+        average_across_subjects=False
+):
+    """
+    Reads the node-level metrics for all subjects from 'thresh_folder' (e.g., 't90')
+    for both ses_pre and ses_post, and merges them by subject + node label (i.e., "Subject"
+    and "Label"). If 'average_across_subjects' is True, then the function will group
+    by 'Label' and average across subjects, resulting in a single row per node label.
+    Otherwise, it returns one row per subject + node combination.
+
+    Returns a DataFrame with columns:
+      - if average_across_subjects=False:
+         ['Subject', 'Label', 'pre_value', 'post_value']
+      - if average_across_subjects=True:
+         ['Label', 'pre_value', 'post_value']
+
+    The node metrics filenames are assumed to be something like:
+      hcpmmp1_minmax_t90_node_metrics.csv
+    in each subject's directory:
+      sub-XX/ses_pre/connectome_stats/t90/
+      sub-XX/ses_post/connectome_stats/t90/
+
+    Parameters:
+      root (str): The root directory containing subject folders.
+      thresh_folder (str): The name of the threshold subfolder (e.g., "t90", "t80", or "unthresholded").
+      metric (str): The column name of the metric we want to gather (e.g., "Degree Centrality").
+      average_across_subjects (bool): If True, the result is grouped by node label, giving one row
+                                      per node (averaged across subjects). If False, we keep the
+                                      subject-level detail.
+
+    Returns:
+      pd.DataFrame or None if no data found.
+    """
+    pre_records = []
+    post_records = []
+
+    # Build the node metrics filename, e.g. hcpmmp1_minmax_t90_node_metrics.csv
+    if thresh_folder == "unthresholded":
+        node_filename = "hcpmmp1_minmax_unmodified_node_metrics.csv"
+    else:
+        node_filename = f"hcpmmp1_minmax_{thresh_folder}_node_metrics.csv"
+
+    subjects = get_subject_dirs(root)
+    for subj in subjects:
+        subj_path = os.path.join(root, subj)
+
+        pre_csv = os.path.join(subj_path, "ses_pre", "connectome_stats", thresh_folder, node_filename)
+        post_csv = os.path.join(subj_path, "ses_post", "connectome_stats", thresh_folder, node_filename)
+
+        if not os.path.isfile(pre_csv) or not os.path.isfile(post_csv):
+            # Skip if either file is missing
+            continue
+
+        df_pre = pd.read_csv(pre_csv)
+        df_post = pd.read_csv(post_csv)
+
+        # Keep only the columns we need: Label + metric
+        # We'll add Subject so we can later keep or group by it
+        df_pre = df_pre[["Label", metric]].copy()
+        df_pre["Subject"] = subj
+
+        df_post = df_post[["Label", metric]].copy()
+        df_post["Subject"] = subj
+
+        # We'll label them "pre" or "post" if we need them for clarity
+        df_pre["Session"] = "pre"
+        df_post["Session"] = "post"
+
+        pre_records.append(df_pre)
+        post_records.append(df_post)
+
+    if not pre_records or not post_records:
+        print("No subjects with both pre and post files found.")
+        return None
+
+    # Combine all subjects' pre data, all subjects' post data
+    df_pre_all = pd.concat(pre_records, ignore_index=True)
+    df_post_all = pd.concat(post_records, ignore_index=True)
+
+    # Rename the metric column to pre_value or post_value
+    df_pre_all.rename(columns={metric: "pre_value"}, inplace=True)
+    df_post_all.rename(columns={metric: "post_value"}, inplace=True)
+
+    # Merge on Subject + Label to get pre_value and post_value side by side
+    merged = pd.merge(
+        df_pre_all[["Subject", "Label", "pre_value"]],
+        df_post_all[["Subject", "Label", "post_value"]],
+        on=["Subject", "Label"],
+        how="inner"
+    )
+
+    if merged.empty:
+        print("No common (Subject, Label) pairs found.")
+        return None
+
+    if average_across_subjects:
+        # Group by Label and average across subjects
+        merged_grouped = merged.groupby("Label", as_index=False).agg({
+            "pre_value": "mean",
+            "post_value": "mean"
+        })
+        return merged_grouped  # columns: Label, pre_value, post_value
+    else:
+        # Return the full detail: columns [Subject, Label, pre_value, post_value]
+        return merged
+
+
+def plot_pre_post_node_lines(merged_df, metric="Degree Centrality", top_n=None):
+    """
+    Given a DataFrame with columns [Label, pre_value, post_value],
+    plot a 'before-after' line plot showing how each node's mean metric changes
+    from pre (x=0) to post (x=1).
+
+    Parameters:
+      merged_df (pd.DataFrame): Must have columns ['Label', 'pre_value', 'post_value'].
+      metric (str): The name of the metric being plotted (used for the y-axis label and title).
+      top_n (int or None): If None (default), plot all nodes. Otherwise, plot only the
+                           top 'top_n' nodes with the largest absolute difference
+                           (|post_value - pre_value|).
+    """
+    # Compute the difference (post - pre) and absolute difference
+    merged_df["diff"] = merged_df["post_value"] - merged_df["pre_value"]
+    merged_df["abs_diff"] = merged_df["diff"].abs()
+
+    # If user requested top_n nodes by absolute difference
+    if top_n is not None:
+        merged_df = merged_df.nlargest(top_n, "abs_diff")
+
+    # Sort by actual diff so lines are drawn from smallest to largest difference
+    merged_df.sort_values("diff", inplace=True)
+
+    plt.figure(figsize=(8, max(6, 0.2 * len(merged_df))))  # dynamic height
+
+    for i, row in merged_df.iterrows():
+        label = row["Label"]
+        pre_val = row["pre_value"]
+        post_val = row["post_value"]
+
+        # x=0 for pre, x=1 for post
+        plt.plot([0, 1], [pre_val, post_val], marker='o')
+
+        # Label near the post point
+        plt.text(1.01, post_val, label, va='center', fontsize=8)
+
+    plt.xlim(-0.1, 1.2)
+    plt.xticks([0, 1], ["Pre", "Post"])
+    plt.xlabel("Session")
+    plt.ylabel(metric)
+
+    n_nodes = len(merged_df)
+    title_str = f"{metric} (Mean Across Subjects) Pre vs Post - {n_nodes} nodes"
+    if top_n is not None:
+        title_str += f" (Top {top_n} by {metric})"
+    plt.title(title_str)
+
+    plt.tight_layout()
+    plt.show()
+
+
+if __name__ == "__main__":
+    root = "/Users/nikitakaruzin/Desktop/Research/Picht/j_stats"
+    # We'll focus on t90 threshold
+    thresh_folder = "t90"
+    metric = "Eigenvector Centrality"  # or "Strength", "Degree Centrality",
+    # "Eigenvector Centrality", "Betweenness Centrality" etc.
+
+    merged = gather_pre_post_node_data(
+        root,
+        thresh_folder=thresh_folder,
+        metric=metric,
+        average_across_subjects=True
+    )
+    if merged is not None:
+        plot_pre_post_node_lines(merged, metric=metric, top_n=5)
