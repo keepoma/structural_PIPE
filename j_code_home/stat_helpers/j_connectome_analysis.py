@@ -6,12 +6,11 @@ from scipy import stats
 from stat_helpers.j_statistical_helpers import (lookup_dictionary, threshold_matrix_by_weight,
                                          threshold_matrix_by_clipping, create_graph,
                                          load_node_metrics_as_dataframe)
-"""
 from connectome_visualization import (visualize_matrix_weights, visualize_saved_metrics,
                                       plot_metric_boxplot, plot_metric_violin,
                                       visualize_matrix_comparison, visualize_matrix,
                                       visualize_matrix_side_by_side)
-"""
+
 
 
 

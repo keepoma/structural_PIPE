@@ -15,20 +15,19 @@ Statistics pipe
 
 
 def main():
-    args = get_args()
-    subject_dirs = get_subject_dirs(args.root)
-    logs(args.root)
-    sessions = ['ses_pre', 'ses_post']
+    root = "/Users/nikitakaruzin/Desktop/Research/Picht/j_stats"
+    subject_dirs = get_subject_dirs(root)
     for subj_dir in subject_dirs:
+        sessions = ['ses_pre', 'ses_post']
         for session in sessions:
             session_dir = os.path.join(subj_dir, session)
             subj_ses = subj_dir + '_' + session
             paths = get_subject_paths(session_dir)
 
             print(f"Working on {subj_ses}")
-            file_path = os.path.join(paths["atlas_dir"], "hcpmmp1_scale_length.csv")
+            file_path = os.path.join(paths["atlas_dir"], "hcpmmp1_minmax.csv")
             matrix = np.genfromtxt(file_path, delimiter=',')
-            lookup_path = "/home/nikita/anaconda3/share/mrtrix3/labelconvert/hcpmmp1_ordered.txt"
+            lookup_path = "/Users/nikitakaruzin/MRI/projects/BATMAN/Supplementary_Files/hcpmmp1_ordered.txt"
 
             fancy_print("Computing connectivity metrics", subj_ses)
             os.makedirs(paths["con_stats_dir"], exist_ok=True)
