@@ -1,10 +1,46 @@
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 import networkx as nx
 import seaborn as sns
 import pandas as pd
 from helpers.j_helpers import get_subject_dirs
+from j_statistical_helpers import shorten_label, extract_sub_ses
+
+
+node_type_dict = {
+    # Visual Cortex
+    "L_V1": "Visual Cortex",
+    "R_V1": "Visual Cortex",
+    "L_V2": "Visual Cortex",
+    "R_V2": "Visual Cortex",
+    "L_V3": "Visual Cortex",
+    "R_V3": "Visual Cortex",
+
+    # Motor Cortex
+    "R_4": "Motor Cortex",
+
+    # Somatosensory Cortex
+    "L_3a": "Somatosensory Cortex",
+
+    # Diencephalon
+    "L_Thalamus": "Diencephalon",
+    "R_Thalamus": "Diencephalon",
+
+    # Basal Ganglia
+    "L_Putamen": "Basal Ganglia",
+    "R_Putamen": "Basal Ganglia",
+    "L_Caudate": "Basal Ganglia",
+    "R_Caudate": "Basal Ganglia",
+
+    # Brainstem
+    "Brain-Stem": "Brainstem",
+
+    # Cerebellum
+    "L_Cerebellum": "Cerebellum",
+    "R_Cerebellum": "Cerebellum"
+}
 
 def visualize_matrix_weights(matrix, bins=50):
     """
@@ -435,18 +471,476 @@ def plot_pre_post_node_lines(merged_df, metric="Degree Centrality", top_n=None):
     plt.show()
 
 
+def visualize_top_n_nodes_and_their_edges(
+    node_metrics_csv,
+    edge_csv,
+    node_metric='Strength',
+    n=10,
+    layout='circular',
+    node_type_dict=None,
+    offset=0.07,
+    save_figure=False
+):
+    """
+    1. Reads a node metrics CSV containing columns like:
+         [Label, Degree Centrality, Strength, Eigenvector Centrality, Betweenness Centrality].
+    2. Reads an edges CSV containing columns:
+         [Source, Target, Weight].
+    3. Selects the top N nodes by the specified node_metric.
+    4. Filters edges to only include those connecting the top N nodes among themselves.
+    5. Builds a subgraph from these nodes and edges and visualizes it, with node color
+       determined by their anatomical category (node_type_dict) and labels offset above nodes.
+
+    Parameters:
+      node_metrics_csv (str): Path to the CSV with node-level metrics.
+      edge_csv (str): Path to the CSV with edges [Source, Target, Weight].
+      node_metric (str): The node-level metric by which to rank (default='Strength').
+      n (int): How many top nodes to include (default=10).
+      layout (str): Which NetworkX layout to use ('circular', 'kamada_kawai', 'spring', etc.).
+      node_type_dict (dict): Mapping {node_label: category}, e.g. 'L_V1' -> 'Visual Cortex'.
+      offset (float): Vertical offset for node labels to reduce overlap (default=0.07).
+    """
+
+    # Example category-to-color mapping for your chosen categories
+    category_color_map = {
+        "Visual Cortex": "lightblue",
+        "Motor Cortex": "red",
+        "Somatosensory Cortex": "olive",
+        "Basal Ganglia": "lightgreen",
+        "Diencephalon": "pink",
+        "Brainstem": "orange",
+        "Cerebellum": "lightgray"
+    }
+
+    # 1. Read the node metrics
+    node_df = pd.read_csv(node_metrics_csv)
+    node_df = node_df.sort_values(node_metric, ascending=False)
+    top_n_nodes = node_df.head(n)['Label'].tolist()
+
+    # 2. Read the edges
+    edge_df = pd.read_csv(edge_csv)
+
+    # 3. Filter edges
+    sub_edges = edge_df[
+        edge_df['Source'].isin(top_n_nodes) & edge_df['Target'].isin(top_n_nodes)
+    ]
+
+    # 4. Build the subgraph
+    G = nx.Graph()
+
+    if node_type_dict is None:
+        # If no dictionary is provided, default to "Visual Cortex" or any fallback
+        node_type_dict = {}
+
+    # Add top N nodes
+    for _, row in node_df.head(n).iterrows():
+        label = row['Label']
+        category = node_type_dict.get(label, "Visual Cortex")  # fallback if not in dict
+        G.add_node(label, **row.to_dict(), category=category)
+
+    # Add edges
+    for _, row in sub_edges.iterrows():
+        source = row['Source']
+        target = row['Target']
+        weight = float(row['Weight'])
+        G.add_edge(source, target, weight=weight)
+
+    # 5. Choose layout
+    if layout == 'circular':
+        pos = nx.circular_layout(G)
+    elif layout == 'kamada_kawai':
+        pos = nx.kamada_kawai_layout(G, weight='weight')
+    elif layout == 'spring':
+        pos = nx.spring_layout(G, seed=42)
+    else:
+        pos = nx.spring_layout(G, seed=42)
+
+    plt.figure(figsize=(7, 7))
+
+    # Scale node sizes by the chosen metric
+    metric_values = node_df[node_metric]
+    max_val = metric_values.max() if len(metric_values) > 0 else 1
+    node_sizes = []
+    for node in G.nodes():
+        node_val = G.nodes[node].get(node_metric, 1)
+        node_sizes.append(300 + 2500 * (node_val / max_val))
+
+    # Determine node colors by category
+    node_colors = []
+    for node in G.nodes():
+        cat = G.nodes[node].get('category', 'Visual Cortex')
+        color = category_color_map.get(cat, 'lightblue')  # fallback color
+        node_colors.append(color)
+
+    # Draw nodes
+    nx.draw_networkx_nodes(
+        G, pos,
+        node_size=node_sizes,
+        node_color=node_colors,
+        edgecolors='black'
+    )
+
+    # Scale edge widths
+    edges = G.edges(data=True)
+    if edges:
+        weights = [edge[2]['weight'] for edge in edges]
+        w_min, w_max = min(weights), max(weights)
+        if w_min == w_max:
+            scaled_widths = [3]*len(weights)
+        else:
+            scaled_widths = [
+                1 + (5 - 1) * ((w - w_min) / (w_max - w_min))
+                for w in weights
+            ]
+    else:
+        scaled_widths = []
+
+    nx.draw_networkx_edges(
+        G, pos,
+        width=scaled_widths,
+        edge_color='gray'
+    )
+
+    # Offset labels above nodes
+    label_positions = {}
+    display_labels = {}
+    for node, (x, y) in pos.items():
+        label_positions[node] = (x, y + offset)
+        display_labels[node] = shorten_label(node)
+    nx.draw_networkx_labels(
+        G,
+        label_positions,
+        labels=display_labels,
+        font_size=9
+    )
+    # Build legend handles from category_color_map
+    legend_handles = []
+    for cat, color in category_color_map.items():
+        legend_handles.append(
+            Line2D([0], [0], marker='o', color='w', label=cat,
+                   markerfacecolor=color, markersize=10, markeredgecolor='black')
+        )
+
+    plt.legend(
+        handles=legend_handles,
+        loc='upper right',
+        bbox_to_anchor=(1.1, 0.98),  # shift legend slightly outside the axes to the right
+        borderaxespad=0.,
+        fontsize=9
+    )
+
+    subj_ses = extract_sub_ses(node_metrics_csv)
+
+    title_text = f"Top {n} Nodes by {node_metric} with Interconnecting Edges for {subj_ses}"
+    plt.title(title_text)
+    plt.axis('off')
+
+    if save_figure:
+        save_dir = "/Users/nikitakaruzin/Desktop/Research/Picht/Lab Report/figs"
+        os.makedirs(save_dir, exist_ok=True)  # ensure directory exists
+
+        # Create a safe filename from the title by replacing spaces with underscores
+        safe_filename = title_text.replace(' ', '_') + ".png"
+        save_path = os.path.join(save_dir, safe_filename)
+
+        # Save with higher resolution (dpi=300) and tight bounding box
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"Figure saved to {save_path}")
+
+    plt.show()
+
+
+def visualize_two_files_side_by_side(
+    node_metrics_csv_pre,
+    edge_csv_pre,
+    node_metrics_csv_post,
+    edge_csv_post,
+    node_metric='Strength',
+    n=10,
+    layout='circular',
+    node_type_dict=None,
+    offset=0.07,
+    save_figure=False
+):
+    """
+    Creates a side-by-side figure with two subplots:
+      - Left: the top N nodes/edges from (node_metrics_csv_pre, edge_csv_pre)
+      - Right: the top N nodes/edges from (node_metrics_csv_post, edge_csv_post)
+    This allows a direct visual comparison (e.g., pre- vs post-therapy).
+
+    Parameters:
+      node_metrics_csv_pre (str): CSV for node-level metrics (pre).
+      edge_csv_pre (str): CSV for edges [Source, Target, Weight] (pre).
+      node_metrics_csv_post (str): CSV for node-level metrics (post).
+      edge_csv_post (str): CSV for edges (post).
+      node_metric (str): Which metric to rank by (default='Strength').
+      n (int): Number of top nodes to display (default=10).
+      layout (str): Layout name ('circular', 'kamada_kawai', 'spring', etc.).
+      node_type_dict (dict): Mapping for color-coding categories (optional).
+      offset (float): Vertical offset for node labels (default=0.07).
+      save_figure (bool): If True, saves the entire side-by-side figure.
+
+    Returns:
+      None
+    """
+
+    # Common color map
+    category_color_map = {
+        "Visual Cortex": "lightblue",
+        "Motor Cortex": "gold",
+        "Somatosensory Cortex": "olive",
+        "Basal Ganglia": "lightgreen",
+        "Diencephalon": "pink",
+        "Brainstem": "orange",
+        "Cerebellum": "lightgray"
+    }
+
+    # --------------------
+    # 1) Build PRE Graph
+    # --------------------
+    df_pre_nodes = pd.read_csv(node_metrics_csv_pre).sort_values(node_metric, ascending=False)
+    top_n_pre = df_pre_nodes.head(n)['Label'].tolist()
+
+    df_pre_edges = pd.read_csv(edge_csv_pre)
+    sub_pre_edges = df_pre_edges[
+        df_pre_edges['Source'].isin(top_n_pre) & df_pre_edges['Target'].isin(top_n_pre)
+    ]
+
+    G_pre = nx.Graph()
+    if node_type_dict is None:
+        node_type_dict = {}
+
+    for _, row in df_pre_nodes.head(n).iterrows():
+        label = row['Label']
+        category = node_type_dict.get(label, "Visual Cortex")
+        G_pre.add_node(label, **row.to_dict(), category=category)
+
+    for _, row in sub_pre_edges.iterrows():
+        G_pre.add_edge(row['Source'], row['Target'], weight=float(row['Weight']))
+
+    if layout == 'circular':
+        pos_pre = nx.circular_layout(G_pre)
+    elif layout == 'kamada_kawai':
+        pos_pre = nx.kamada_kawai_layout(G_pre, weight='weight')
+    elif layout == 'spring':
+        pos_pre = nx.spring_layout(G_pre, seed=42)
+    else:
+        pos_pre = nx.spring_layout(G_pre, seed=42)
+
+    # --------------------
+    # 2) Build POST Graph
+    # --------------------
+    df_post_nodes = pd.read_csv(node_metrics_csv_post).sort_values(node_metric, ascending=False)
+    top_n_post = df_post_nodes.head(n)['Label'].tolist()
+
+    df_post_edges = pd.read_csv(edge_csv_post)
+    sub_post_edges = df_post_edges[
+        df_post_edges['Source'].isin(top_n_post) & df_post_edges['Target'].isin(top_n_post)
+    ]
+
+    G_post = nx.Graph()
+    for _, row in df_post_nodes.head(n).iterrows():
+        label = row['Label']
+        category = node_type_dict.get(label, "Visual Cortex")
+        G_post.add_node(label, **row.to_dict(), category=category)
+
+    for _, row in sub_post_edges.iterrows():
+        G_post.add_edge(row['Source'], row['Target'], weight=float(row['Weight']))
+
+    if layout == 'circular':
+        pos_post = nx.circular_layout(G_post)
+    elif layout == 'kamada_kawai':
+        pos_post = nx.kamada_kawai_layout(G_post, weight='weight')
+    elif layout == 'spring':
+        pos_post = nx.spring_layout(G_post, seed=42)
+    else:
+        pos_post = nx.spring_layout(G_post, seed=42)
+
+    # --------------------
+    # 3) Create figure with 2 subplots
+    # --------------------
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 7))
+    fig.suptitle(f"Top {n} Nodes by {node_metric} in one pre-Therapy Patient")
+
+    # Helper function to draw one subgraph on a given axis
+    def draw_subgraph(ax, G, pos, df_nodes):
+        # Node sizes
+        metric_values = df_nodes[node_metric]
+        max_val = metric_values.max() if len(metric_values) > 0 else 1
+        node_sizes = []
+        for node in G.nodes():
+            node_val = G.nodes[node].get(node_metric, 1)
+            node_sizes.append(300 + 2500 * (node_val / max_val))
+
+        # Node colors
+        node_colors = []
+        for node in G.nodes():
+            cat = G.nodes[node].get('category', 'Visual Cortex')
+            node_colors.append(category_color_map.get(cat, 'lightblue'))
+
+        # Edges
+        edges_data = G.edges(data=True)
+        if edges_data:
+            weights = [ed[2]['weight'] for ed in edges_data]
+            w_min, w_max = min(weights), max(weights)
+            if w_min == w_max:
+                scaled_widths = [3]*len(weights)
+            else:
+                scaled_widths = [
+                    1 + (5 - 1)*((w - w_min)/(w_max - w_min))
+                    for w in weights
+                ]
+        else:
+            scaled_widths = []
+
+        # Draw
+        nx.draw_networkx_nodes(G, pos, ax=ax,
+                               node_size=node_sizes,
+                               node_color=node_colors,
+                               edgecolors='black')
+        nx.draw_networkx_edges(G, pos, ax=ax,
+                               width=scaled_widths,
+                               edge_color='gray')
+
+        # Offset labels
+        label_positions = {}
+        display_labels = {}
+        for node, (x, y) in pos.items():
+            label_positions[node] = (x, y + offset)
+            display_labels[node] = shorten_label(node)
+
+        nx.draw_networkx_labels(G, label_positions, ax=ax,
+                                labels=display_labels, font_size=9)
+        ax.axis('off')
+
+    # Draw the "pre" graph on ax1
+    draw_subgraph(ax1, G_pre, pos_pre, df_pre_nodes)
+    subj_ses_pre = extract_sub_ses(node_metrics_csv_pre)
+    ax1.set_title(f"Connectome scaled by inverse length", fontsize=10)
+
+    # Draw the "post" graph on ax2
+    draw_subgraph(ax2, G_post, pos_post, df_post_nodes)
+    subj_ses_post = extract_sub_ses(node_metrics_csv_post)
+    ax2.set_title(f"Unscaled connectome", fontsize=10)
+
+    # Build legend handles once
+    legend_handles = []
+    for cat, color in category_color_map.items():
+        legend_handles.append(
+            Line2D([0], [0], marker='o', color='w', label=cat,
+                   markerfacecolor=color, markersize=10, markeredgecolor='black')
+        )
+
+    # Place a single legend for the figure (outside the subplots)
+    fig.legend(
+        handles=legend_handles,
+        loc='upper right',
+        bbox_to_anchor=(0.99, 0.99),
+        borderaxespad=0.,
+        fontsize=9
+    )
+
+    # 4) Optionally save figure
+    if save_figure:
+        save_dir = "/Users/nikitakaruzin/Desktop/Research/Picht/Lab Report/figs"
+        os.makedirs(save_dir, exist_ok=True)
+        # Create a filename from the suptitle
+        safe_filename = f"Side_by_side_Top_{n}_{node_metric}_invlength.png".replace(' ', '_')
+        save_path = os.path.join(save_dir, safe_filename)
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"Side-by-side figure saved to {save_path}")
+
+    ax1.set_xlim(-1.2, 1.2)
+    ax1.set_ylim(-1.2, 1.2)
+    ax2.set_xlim(-1.2, 1.2)
+    ax2.set_ylim(-1.2, 1.2)
+    plt.tight_layout()
+
+    plt.show()
+
+
+
 if __name__ == "__main__":
     root = "/Users/nikitakaruzin/Desktop/Research/Picht/j_stats"
     # We'll focus on t90 threshold
     thresh_folder = "t90"
-    metric = "Eigenvector Centrality"  # or "Strength", "Degree Centrality",
-    # "Eigenvector Centrality", "Betweenness Centrality" etc.
+    metric = "Strength"  # or "Strength", "Degree Centrality", Eigenvector Centrality
+    nodes_pre_minmax = ("/Users/nikitakaruzin/Desktop/Research/Picht/j_stats/sub-11/ses_pre/"
+             "connectome_stats/unthresholded/hcpmmp1_minmax_unmodified_node_metrics.csv")
+    edges_pre_minmax = ("/Users/nikitakaruzin/Desktop/Research/Picht/j_stats/sub-11/ses_pre/"
+             "connectome_stats/unthresholded/hcpmmp1_minmax_unmodified_top_50_edges.csv")
 
+    nodes_post_minmax = ("/Users/nikitakaruzin/Desktop/Research/Picht/j_stats/sub-11/ses_post/"
+             "connectome_stats/unthresholded/hcpmmp1_minmax_unmodified_node_metrics.csv")
+    edges_post_minmax = ("/Users/nikitakaruzin/Desktop/Research/Picht/j_stats/sub-11/ses_post/"
+             "connectome_stats/unthresholded/hcpmmp1_minmax_unmodified_top_50_edges.csv")
+
+    visualize_top_n_nodes_and_their_edges(
+        nodes_pre_minmax,
+        edges_pre_minmax,
+        node_metric='Degree Centrality',
+        n=15,
+        layout='circular',
+        node_type_dict=node_type_dict,
+        offset=0,
+        save_figure=False
+    )
+    visualize_top_n_nodes_and_their_edges(
+        nodes_post_minmax,
+        edges_post_minmax,
+        node_metric='Strength',
+        n=15,
+        layout='circular',
+        node_type_dict=node_type_dict,
+        offset=0,
+        save_figure=False
+    )
+    visualize_two_files_side_by_side(
+        nodes_pre_minmax,
+        edges_pre_minmax,
+        nodes_post_minmax,
+        edges_post_minmax,
+        node_metric='Strength',
+        n=15,
+        layout='circular',
+        node_type_dict=node_type_dict,
+        offset=0,
+        save_figure=False
+    )
+
+    nodes_pre_invlenght = ("/Users/nikitakaruzin/Desktop/Research/Picht/j_stats/sub-11/ses_pre/"
+                           "connectome_stats/unthresholded/hcpmmp1_invleng_unmodified_node_metrics.csv")
+    edges_pre_invlenght = ("/Users/nikitakaruzin/Desktop/Research/Picht/j_stats/sub-11/ses_pre/"
+                           "connectome_stats/unthresholded/hcpmmp1_invleng_unmodified_top_50_edges.csv")
+
+    nodes_post_invlenght = ("/Users/nikitakaruzin/Desktop/Research/Picht/j_stats/sub-11/ses_post/"
+                            "connectome_stats/unthresholded/hcpmmp1_invleng_unmodified_node_metrics.csv")
+    edges_post_invlenght = ("/Users/nikitakaruzin/Desktop/Research/Picht/j_stats/sub-11/ses_post/"
+                            "connectome_stats/unthresholded/hcpmmp1_invleng_unmodified_top_50_edges.csv")
+    visualize_two_files_side_by_side(
+        nodes_pre_invlenght,
+        edges_pre_invlenght,
+        nodes_pre_minmax,
+        edges_pre_minmax,
+        node_metric='Strength',
+        n=15,
+        layout='circular',
+        node_type_dict=node_type_dict,
+        offset=0,
+        save_figure=False
+    )
+
+
+    """
     merged = gather_pre_post_node_data(
         root,
         thresh_folder=thresh_folder,
         metric=metric,
         average_across_subjects=True
-    )
+    )  
     if merged is not None:
         plot_pre_post_node_lines(merged, metric=metric, top_n=5)
+    """
+
+
+

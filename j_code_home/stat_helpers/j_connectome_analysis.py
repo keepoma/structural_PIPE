@@ -133,7 +133,6 @@ def compute_metrics_for_weight_threshold_range(paths, sc_path,
     con_stats_dir = paths["con_stats_dir"]
     os.makedirs(paths["con_stats_dir"], exist_ok=True)
 
-
     # Load lookup (for node labels)
     lookup = lookup_dictionary(lookup_path)
 
@@ -237,6 +236,13 @@ def compute_metrics_for_prethresholded_matrix(matrix, lookup_path, output_dir, b
         node: sum(data.get('weight', 1) for _, _, data in G.edges(node, data=True))
         for node in G.nodes()
     }
+    edges_sorted_by_strength = sorted(
+        G.edges(data=True),
+        key=lambda edge: edge[2].get('weight', 0),
+        reverse=True
+    )
+    top_50_edges = edges_sorted_by_strength[:50]
+
     eigenvector_centrality = nx.eigenvector_centrality(G, max_iter=1000)
     betweenness_centrality = nx.betweenness_centrality(G, weight='weight')
 
@@ -248,11 +254,13 @@ def compute_metrics_for_prethresholded_matrix(matrix, lookup_path, output_dir, b
     # Prepare file names.
     node_csv_file = os.path.join(output_dir, f"{base_filename}_node_metrics.csv")
     global_csv_file = os.path.join(output_dir, f"{base_filename}_global_metrics.csv")
+    top_edges = os.path.join(output_dir, f"{base_filename}_top_50_edges.csv")
 
     # Check for file existence.
-    if (os.path.isfile(node_csv_file) and os.path.isfile(global_csv_file)) and not overwrite:
+    if ((os.path.isfile(node_csv_file) and os.path.isfile(global_csv_file) and os.path.isfile(top_edges))
+            and not overwrite):
         print("CSV files already exist; skipping computation.")
-        return node_csv_file, global_csv_file
+        return node_csv_file, global_csv_file, top_edges
 
     # Load lookup dictionary for node labels.
     lookup = lookup_dictionary(lookup_path)
@@ -275,10 +283,22 @@ def compute_metrics_for_prethresholded_matrix(matrix, lookup_path, output_dir, b
         writer.writerow(["Global Reaching Centrality", "Global Efficiency", "Local Efficiency"])
         writer.writerow([f"{grc:.4f}", f"{global_efficiency:.4f}", f"{local_efficiency:.4f}"])
 
+    # Save edge weights to CSV.
+    with open(top_edges, "w", newline="") as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(["Source", "Target", "Weight"])
+        for u, v, attr in top_50_edges:
+            w = attr.get('weight', 0)
+            # Convert node indices to meaningful labels via lookup
+            u_label = lookup.get(u, f"Node_{u}")
+            v_label = lookup.get(v, f"Node_{v}")
+            writer.writerow([u_label, v_label, f"{w:.4f}"])
+
     print(f"Saved node-level metrics to: {node_csv_file}")
     print(f"Saved global metrics to: {global_csv_file}")
+    print(f"Saved top edges {top_edges}")
 
-    return node_csv_file, global_csv_file
+    return node_csv_file, global_csv_file, top_edges
 
 
 def find_top_nodes_by_strength(matrix, lookup_path, top_n=None, csv_path=None):

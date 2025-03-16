@@ -2,6 +2,7 @@ import os
 import numpy as np
 import networkx as nx
 import pandas as pd
+import re
 
 
 def get_subject_dirs(root):
@@ -114,3 +115,68 @@ def load_node_metrics_as_dataframe(threshold_to_node_csv):
     # Concatenate all per-threshold data into one big DataFrame
     combined_df = pd.concat(dataframes, ignore_index=True)
     return combined_df
+
+
+def shorten_label(label):
+    """
+    If 'label' contains an underscore, we split on the first underscore.
+    If the suffix (the part after the underscore) is longer than 3 characters,
+    we truncate it to the first 3. Otherwise, we leave it as is.
+
+    Examples:
+      - "L_Cerebellum" -> "L_Cer"
+      - "L_V2" -> "L_V2" (since 'V2' is only 2 chars)
+      - "Brainstem" -> "Brainstem" (no underscore)
+    """
+    if "_" in label:
+        prefix, suffix = label.split("_", 1)
+        if len(suffix) > 3:
+            suffix = suffix[:3]
+        return prefix + "_" + suffix
+    else:
+        return label
+
+
+def extract_sub_ses(path):
+    """
+    Given a path like:
+      /Users/.../sub-11/ses_post/connectome_stats/...
+    This function returns:
+      'Subject 11 Post-Therapy'
+    If it's sub-11/ses_pre, it returns:
+      'Subject 11 Pre-Therapy'
+    """
+    parts = path.split(os.sep)
+
+    subject_part = None
+    session_part = None
+
+    # Identify the parts that start with "sub-" or "ses_"
+    for part in parts:
+        if part.startswith("sub-"):
+            subject_part = part
+        elif part.startswith("ses_"):
+            session_part = part
+
+    if not subject_part or not session_part:
+        return None  # Could not find both parts
+
+    # Extract the subject number from sub-XX (e.g., "sub-11" -> "11")
+    # We'll use a regex to handle numeric IDs. If your IDs have letters, adjust accordingly.
+    match = re.match(r"sub-(\d+)", subject_part)
+    if match:
+        subject_num = match.group(1)
+    else:
+        # Fallback: remove "sub-" if the pattern is guaranteed, or leave as-is if uncertain
+        subject_num = subject_part.replace("sub-", "")
+
+    # Map session to a descriptive phrase
+    if session_part == "ses_pre":
+        therapy_str = "Pre-TMS"
+    elif session_part == "ses_post":
+        therapy_str = "Post-TMS"
+    else:
+        therapy_str = session_part  # Fallback if you have other sessions
+
+    return f"Subject {subject_num} {therapy_str}"
+
