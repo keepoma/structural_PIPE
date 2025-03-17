@@ -18,15 +18,16 @@ node_type_dict = {
     "L_V3": "Visual Cortex",
     "R_V3": "Visual Cortex",
 
-    # Motor Cortex
-    "R_4": "Motor Cortex",
+    # frontal motor Cortex
+    "R_4": "Frontal Lobe",
 
     # Somatosensory Cortex
-    "L_3a": "Somatosensory Cortex",
+    "L_3a": "Parietal Lobe",
 
     # Diencephalon
     "L_Thalamus": "Diencephalon",
     "R_Thalamus": "Diencephalon",
+    "R_VentralDC": "Diencephalon",
 
     # Basal Ganglia
     "L_Putamen": "Basal Ganglia",
@@ -687,8 +688,8 @@ def visualize_two_files_side_by_side(
     # Common color map
     category_color_map = {
         "Visual Cortex": "lightblue",
-        "Motor Cortex": "gold",
-        "Somatosensory Cortex": "olive",
+        "Frontal Lobe": "gold",
+        "Parietal Lobe": "olive",
         "Basal Ganglia": "lightgreen",
         "Diencephalon": "pink",
         "Brainstem": "orange",
@@ -760,7 +761,7 @@ def visualize_two_files_side_by_side(
     # 3) Create figure with 2 subplots
     # --------------------
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 7))
-    fig.suptitle(f"Top {n} Nodes by {node_metric} in one pre-Therapy Patient")
+    fig.suptitle(f"Top {n} Nodes by averaged {node_metric} in five pre-TMS Connectomes", fontsize=16)
 
     # Helper function to draw one subgraph on a given axis
     def draw_subgraph(ax, G, pos, df_nodes):
@@ -816,12 +817,12 @@ def visualize_two_files_side_by_side(
     # Draw the "pre" graph on ax1
     draw_subgraph(ax1, G_pre, pos_pre, df_pre_nodes)
     subj_ses_pre = extract_sub_ses(node_metrics_csv_pre)
-    ax1.set_title(f"Connectome scaled by inverse length", fontsize=10)
+    ax1.set_title(f"Connectome scaled by inverse length", fontsize=14)
 
     # Draw the "post" graph on ax2
     draw_subgraph(ax2, G_post, pos_post, df_post_nodes)
     subj_ses_post = extract_sub_ses(node_metrics_csv_post)
-    ax2.set_title(f"Unscaled connectome", fontsize=10)
+    ax2.set_title(f"Unscaled connectome", fontsize=14)
 
     # Build legend handles once
     legend_handles = []
@@ -865,36 +866,12 @@ if __name__ == "__main__":
     # We'll focus on t90 threshold
     thresh_folder = "t90"
     metric = "Strength"  # or "Strength", "Degree Centrality", Eigenvector Centrality
-    nodes_pre_minmax = ("/Users/nikitakaruzin/Desktop/Research/Picht/j_stats/sub-11/ses_pre/"
-             "connectome_stats/unthresholded/hcpmmp1_minmax_unmodified_node_metrics.csv")
-    edges_pre_minmax = ("/Users/nikitakaruzin/Desktop/Research/Picht/j_stats/sub-11/ses_pre/"
-             "connectome_stats/unthresholded/hcpmmp1_minmax_unmodified_top_50_edges.csv")
+    nodes_pre_minmax = ("/Users/nikitakaruzin/Desktop/Research/Picht/j_stats/group_analysis/t90/nodes_pre_minmax.csv")
+    edges_pre_minmax = ("/Users/nikitakaruzin/Desktop/Research/Picht/j_stats/group_analysis/t90/edges_pre_minmax.csv")
 
-    nodes_post_minmax = ("/Users/nikitakaruzin/Desktop/Research/Picht/j_stats/sub-11/ses_post/"
-             "connectome_stats/unthresholded/hcpmmp1_minmax_unmodified_node_metrics.csv")
-    edges_post_minmax = ("/Users/nikitakaruzin/Desktop/Research/Picht/j_stats/sub-11/ses_post/"
-             "connectome_stats/unthresholded/hcpmmp1_minmax_unmodified_top_50_edges.csv")
+    nodes_post_minmax = ("/Users/nikitakaruzin/Desktop/Research/Picht/j_stats/group_analysis/t90/nodes_post_minmax.csv")
+    edges_post_minmax = ("/Users/nikitakaruzin/Desktop/Research/Picht/j_stats/group_analysis/t90/edges_post_minmax.csv")
 
-    visualize_top_n_nodes_and_their_edges(
-        nodes_pre_minmax,
-        edges_pre_minmax,
-        node_metric='Degree Centrality',
-        n=15,
-        layout='circular',
-        node_type_dict=node_type_dict,
-        offset=0,
-        save_figure=False
-    )
-    visualize_top_n_nodes_and_their_edges(
-        nodes_post_minmax,
-        edges_post_minmax,
-        node_metric='Strength',
-        n=15,
-        layout='circular',
-        node_type_dict=node_type_dict,
-        offset=0,
-        save_figure=False
-    )
     visualize_two_files_side_by_side(
         nodes_pre_minmax,
         edges_pre_minmax,
@@ -908,15 +885,11 @@ if __name__ == "__main__":
         save_figure=False
     )
 
-    nodes_pre_invlenght = ("/Users/nikitakaruzin/Desktop/Research/Picht/j_stats/sub-11/ses_pre/"
-                           "connectome_stats/unthresholded/hcpmmp1_invleng_unmodified_node_metrics.csv")
-    edges_pre_invlenght = ("/Users/nikitakaruzin/Desktop/Research/Picht/j_stats/sub-11/ses_pre/"
-                           "connectome_stats/unthresholded/hcpmmp1_invleng_unmodified_top_50_edges.csv")
+    nodes_pre_invlenght = ("/Users/nikitakaruzin/Desktop/Research/Picht/j_stats/group_analysis/t90/nodes_pre_invleng.csv")
+    edges_pre_invlenght = ("/Users/nikitakaruzin/Desktop/Research/Picht/j_stats/group_analysis/t90/edges_pre_invleng.csv")
 
-    nodes_post_invlenght = ("/Users/nikitakaruzin/Desktop/Research/Picht/j_stats/sub-11/ses_post/"
-                            "connectome_stats/unthresholded/hcpmmp1_invleng_unmodified_node_metrics.csv")
-    edges_post_invlenght = ("/Users/nikitakaruzin/Desktop/Research/Picht/j_stats/sub-11/ses_post/"
-                            "connectome_stats/unthresholded/hcpmmp1_invleng_unmodified_top_50_edges.csv")
+    nodes_post_invlenght = ("/Users/nikitakaruzin/Desktop/Research/Picht/j_stats/group_analysis/t90/nodes_post_invleng.csv")
+    edges_post_invlenght = ("/Users/nikitakaruzin/Desktop/Research/Picht/j_stats/group_analysis/t90/edges_post_invleng.csv")
     visualize_two_files_side_by_side(
         nodes_pre_invlenght,
         edges_pre_invlenght,
@@ -941,6 +914,99 @@ if __name__ == "__main__":
     if merged is not None:
         plot_pre_post_node_lines(merged, metric=metric, top_n=5)
     """
+    import numpy as np
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    from matplotlib.ticker import FuncFormatter
 
+    # Load CSVs
+    df_unthresh = pd.read_csv(
+        '/Users/nikitakaruzin/Desktop/Research/Picht/j_stats/group_analysis/unthresholded/unthresholded_node_metrics.csv'
+    )
+    df_thresh = pd.read_csv(
+        '/Users/nikitakaruzin/Desktop/Research/Picht/j_stats/group_analysis/t90/nodes_pre_minmax.csv'
+    )
 
+    # Index DataFrames by "Label"
+    node_col = "Label"
+    df_unthresh_lookup = df_unthresh.set_index(node_col)
+    df_thresh_lookup = df_thresh.set_index(node_col)
 
+    # Define the metrics and setup subplots
+    metrics = [
+        "Degree Centrality",
+        "Strength",
+        "Eigenvector Centrality",
+        "Betweenness Centrality"
+    ]
+
+    fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(10, 8))
+    axes = axes.flatten()
+
+    # Choose two shades of blue for plotting
+    color_unth = "lightblue"
+    color_thresh = "cornflowerblue"
+
+    # Loop over each metric
+    for i, metric in enumerate(metrics):
+        ax = axes[i]
+
+        # Sort the unthresholded DataFrame in descending order by the current metric
+        df_sorted = df_unthresh.sort_values(by=metric, ascending=False)
+        all_nodes = df_sorted[node_col].values
+
+        # Pick 20 nodes at regular intervals across the sorted data
+        indices = np.linspace(0, len(all_nodes) - 1, 20, dtype=int)
+        selected_nodes = all_nodes[indices]
+
+        # Get unthresholded and thresholded values for these nodes
+        unthresh_values = [
+            df_unthresh_lookup.at[node, metric] if node in df_unthresh_lookup.index else 0
+            for node in selected_nodes
+        ]
+        thresh_values = [
+            df_thresh_lookup.at[node, metric] if node in df_thresh_lookup.index else 0
+            for node in selected_nodes
+        ]
+
+        # Plot side-by-side horizontal bars for each selected node
+        y_pos = np.arange(len(selected_nodes))
+        bar_height = 0.4
+
+        ax.barh(
+            y_pos - bar_height / 2,
+            unthresh_values,
+            height=bar_height,
+            color=color_unth,
+            label="Unthresholded"
+        )
+        ax.barh(
+            y_pos + bar_height / 2,
+            thresh_values,
+            height=bar_height,
+            color=color_thresh,
+            label="Thresholded"
+        )
+
+        # Subplot styling
+        ax.set_yticks(y_pos)
+        ax.set_yticklabels(selected_nodes, fontsize=7)
+        ax.invert_yaxis()  # Largest at the top
+        ax.set_xlabel("Value", fontsize=8)
+        ax.set_title(f"Sampled 20 Nodes by {metric}", fontsize=9)
+
+        # Show legend on the first subplot (or on each if desired)
+        if i == 0:
+            ax.legend(fontsize=7)
+
+        # Apply custom tick formatting for the "Strength" metric
+        if metric == "Strength":
+            ax.xaxis.set_major_formatter(FuncFormatter(lambda x, pos: f'{x / 1000:.0f}k' if x >= 1000 else f'{x:.0f}'))
+
+    # Main title and layout adjustments
+    plt.suptitle(
+        "Comparing Unthresholded vs. Thresholded (T90)\nSampling 20 Nodes at Regular Intervals per Metric",
+        fontsize=10
+    )
+    plt.tight_layout()
+    plt.show()

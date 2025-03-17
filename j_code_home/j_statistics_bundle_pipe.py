@@ -22,7 +22,7 @@ Bundle Statistics pipe
 def main():
     root = "/Users/nikitakaruzin/Desktop/Research/Picht/j_stats"
     subject_dirs = get_subject_dirs(root)
-    track_base = "AF"
+    track_base = "CST"
     metrics = ["FA", "ADC", "peaks"]
 
     sessions = ['ses_pre']
@@ -50,7 +50,7 @@ def main():
         track_base,
         metrics,
         alpha=0.7,
-        save_figure=True
+        save_figure=False
     )
 
     # Run group-level statistical tests for the resampled tracts

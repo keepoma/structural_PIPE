@@ -205,7 +205,9 @@ def plot_mean_metrics_along_nodes(subject_dirs, track_base, metrics, alpha=1, sa
     for j in range(i, len(axes)):
         axes[j].axis("off")
 
-    title_text = "Interhemispheric Comparison of Resampled AF Metrics (FA, ADC, and Peaks) in 5 Healthy Subjects"
+    metrics_title = [str(x) for x in metrics]
+    metrics_title = ', '.join(metrics_title)
+    title_text = f"Interhemispheric Comparison of Resampled {track_base} Metrics {metrics_title} in 5 Healthy Subjects"
     plt.suptitle(title_text, fontsize=14)
     plt.tight_layout()
     plt.show()
@@ -219,7 +221,7 @@ def plot_mean_metrics_along_nodes(subject_dirs, track_base, metrics, alpha=1, sa
         save_path = os.path.join(save_dir, safe_filename)
 
         # Save with higher resolution (dpi=300) and tight bounding box
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.savefig(save_path, dpi=300)
         print(f"Figure saved to {save_path}")
 
 

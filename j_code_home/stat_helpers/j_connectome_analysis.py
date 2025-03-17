@@ -4,6 +4,7 @@ import networkx as nx
 import csv
 import pandas as pd
 from scipy import stats
+from statsmodels.stats.multitest import multipletests
 from stat_helpers.j_statistical_helpers import (lookup_dictionary, threshold_matrix_by_weight,
                                          threshold_matrix_by_clipping, create_graph,
                                          load_node_metrics_as_dataframe, get_subject_dirs)
@@ -205,7 +206,7 @@ def compute_metrics_for_weight_threshold_range(paths, sc_path,
 def compute_metrics_for_prethresholded_matrix(matrix, lookup_path, output_dir, base_filename, binarize=False,
                                               overwrite=False):
     """
-    Computes connectivity metrics from a weighted connectivity matrix that is already thresholded.
+    Computes connectivity metrics from a weighted connectivity matrix
 
     Parameters:
       matrix (np.array): The already thresholded weighted connectivity matrix.
@@ -475,6 +476,7 @@ def run_averaged_nodes_statistical_tests(root, thresh_folder):
     return results_node, results_global
 
 
+
 def run_node_level_wilcoxon(root, thresh_folder):
     """
     For each subject, loads the node metrics CSV from the specified threshold folder
@@ -498,9 +500,10 @@ def run_node_level_wilcoxon(root, thresh_folder):
             df_pre = pd.read_csv(pre_csv)
             df_post = pd.read_csv(post_csv)
         except Exception as e:
-            print(f"Skipping subject {subj}: {e}")
+            print(f"Skipping subject {subj} due to file reading error: {e}")
             continue
 
+        # Iterate over each node (row) in pre
         for _, row in df_pre.iterrows():
             label = row["Label"]
             deg_pre = row["Degree Centrality"]
@@ -510,14 +513,16 @@ def run_node_level_wilcoxon(root, thresh_folder):
 
             df_post_node = df_post[df_post["Label"] == label]
             if df_post_node.empty:
-                print(f"Subject {subj}: Node {label} not found in post CSV. Skipping.")
+                print(f"Subject {subj}: Node {label} not found in post CSV. Skipping this node for this subject.")
                 continue
+
             post_row = df_post_node.iloc[0]
             deg_post = post_row["Degree Centrality"]
             str_post = post_row["Strength"]
             eig_post = post_row["Eigenvector Centrality"]
             btw_post = post_row["Betweenness Centrality"]
 
+            # Initialize the data structure for this label if it doesn't exist yet
             if label not in data:
                 data[label] = {
                     "Degree Centrality": {"pre": [], "post": []},
@@ -525,6 +530,8 @@ def run_node_level_wilcoxon(root, thresh_folder):
                     "Eigenvector Centrality": {"pre": [], "post": []},
                     "Betweenness Centrality": {"pre": [], "post": []},
                 }
+
+            # Append pre and post values for this subject's node
             data[label]["Degree Centrality"]["pre"].append(deg_pre)
             data[label]["Degree Centrality"]["post"].append(deg_post)
             data[label]["Strength"]["pre"].append(str_pre)
@@ -534,24 +541,77 @@ def run_node_level_wilcoxon(root, thresh_folder):
             data[label]["Betweenness Centrality"]["pre"].append(btw_pre)
             data[label]["Betweenness Centrality"]["post"].append(btw_post)
 
+    # Now run the Wilcoxon signed-rank test per node (label) × metric
     results = []
     metrics = ["Degree Centrality", "Strength", "Eigenvector Centrality", "Betweenness Centrality"]
+
     for label, metric_data in data.items():
         for metric in metrics:
             pre_vals = metric_data[metric]["pre"]
             post_vals = metric_data[metric]["post"]
+
+            # Check that we have at least 2 data points and equal length (same subjects)
             if len(pre_vals) < 2:
-                res = {"Label": label, "Metric": metric, "Statistic": None, "P_value": None,
-                       "Comment": "Insufficient data"}
+                res = {
+                    "Label": label,
+                    "Metric": metric,
+                    "Statistic": None,
+                    "P_value": None,
+                    "Comment": "Insufficient data (<2 subjects)"
+                }
+            elif len(pre_vals) != len(post_vals):
+                res = {
+                    "Label": label,
+                    "Metric": metric,
+                    "Statistic": None,
+                    "P_value": None,
+                    "Comment": "Mismatched pre/post list lengths"
+                }
             else:
                 try:
                     stat, p = wilcoxon(pre_vals, post_vals)
-                    res = {"Label": label, "Metric": metric, "Statistic": stat, "P_value": p, "Comment": ""}
+                    res = {
+                        "Label": label,
+                        "Metric": metric,
+                        "Statistic": stat,
+                        "P_value": p,
+                        "Comment": ""
+                    }
                 except Exception as e:
-                    res = {"Label": label, "Metric": metric, "Statistic": None, "P_value": None, "Comment": str(e)}
+                    res = {
+                        "Label": label,
+                        "Metric": metric,
+                        "Statistic": None,
+                        "P_value": None,
+                        "Comment": str(e)
+                    }
             results.append(res)
 
     results_df = pd.DataFrame(results)
+
+    # Optional: Multiple comparisons correction (FDR)
+    # Filter out None p-values
+    valid_pvals = results_df["P_value"].dropna()
+    # Perform Benjamini-Hochberg
+    reject_array, pvals_corr, _, _ = multipletests(valid_pvals, alpha=0.05, method='fdr_bh')
+
+    # Map corrected p-values and rejection decisions back into the DataFrame
+    corrected_iter = 0
+    corrected_p_values = []
+    reject_flags = []
+    for idx, row in results_df.iterrows():
+        if pd.isna(row["P_value"]):
+            corrected_p_values.append(None)
+            reject_flags.append(False)
+        else:
+            corrected_p_values.append(pvals_corr[corrected_iter])
+            reject_flags.append(reject_array[corrected_iter])
+            corrected_iter += 1
+
+    results_df["P_value_FDR"] = corrected_p_values
+    results_df["Significant_FDR"] = reject_flags
+
+    # Save the final results
     output_file = os.path.join(group_analysis_dir, f"wilcoxon_node_level_metrics_results_{thresh_folder}.csv")
     results_df.to_csv(output_file, index=False)
     print(f"Wilcoxon node-level test results saved to: {output_file}")
@@ -618,6 +678,7 @@ if __name__ == '__main__':
         run_averaged_nodes_statistical_tests(root, thresh)
         run_node_level_wilcoxon(root, thresh)
     """
+    run_node_level_wilcoxon(root, "t90")
     check_all_p_values("/Users/nikitakaruzin/Desktop/Research/Picht/j_stats/group_analysis", p_threshold=0.05)
 
 

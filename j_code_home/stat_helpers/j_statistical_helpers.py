@@ -180,3 +180,179 @@ def extract_sub_ses(path):
 
     return f"Subject {subject_num} {therapy_str}"
 
+
+import os
+import pandas as pd
+
+
+def average_group_file(root_dir, session, file_rel_path, output_file):
+    """
+    Averages CSV files across subjects for a given session and relative file path.
+
+    Parameters:
+      - root_dir: The directory containing subject folders (e.g., "/Users/nikitakaruzin/Desktop/Research/Picht/j_stats")
+      - session: The session folder name ("ses_pre" or "ses_post")
+      - file_rel_path: The relative path from the subject folder to the CSV file.
+                       For example: "connectome_stats/t90/hcpmmp1_minmax_t90_node_metrics.csv"
+      - output_file: The full path for the output averaged CSV.
+
+    The function searches for all subject folders starting with "sub-" inside root_dir, reads the CSV
+    file for the given session, averages the numeric columns (using the "Label" column for alignment if present),
+    and saves the result to output_file.
+    """
+    # Find subject directories that start with "sub-"
+    subject_dirs = [os.path.join(root_dir, d) for d in os.listdir(root_dir)
+                    if os.path.isdir(os.path.join(root_dir, d)) and d.startswith("sub-")]
+
+    if not subject_dirs:
+        print("No subject directories found in", root_dir)
+        return
+
+    dfs = []
+    for sub in subject_dirs:
+        csv_path = os.path.join(sub, session, file_rel_path)
+        if os.path.exists(csv_path):
+            try:
+                df = pd.read_csv(csv_path)
+                # If there's a Label column, set it as the index so we average by node labels.
+                if "Label" in df.columns:
+                    df.set_index("Label", inplace=True)
+                dfs.append(df)
+            except Exception as e:
+                print(f"Error reading {csv_path}: {e}")
+        else:
+            print("File not found:", csv_path)
+
+    if not dfs:
+        print("No CSV files found for session", session, "with relative path", file_rel_path)
+        return
+
+    # Concatenate dataframes and average by index (node labels) using only numeric columns.
+    avg_df = pd.concat(dfs, axis=0).groupby(level=0).mean(numeric_only=True)
+    avg_df.reset_index(inplace=True)
+
+    # Save the averaged dataframe
+    avg_df.to_csv(output_file, index=False)
+    print("Averaged CSV saved to", output_file)
+
+
+import os
+import numpy as np
+import pandas as pd
+
+def average_third_column_edges(root_dir, session, file_rel_path, output_file):
+    """
+    Reads the same edge-metrics CSV from each subject's session folder and averages
+    only the 3rd column. The 1st and 2nd columns are kept exactly as in the first
+    (reference) CSV, preserving both the column names and row order.
+
+    Parameters:
+      root_dir: The parent directory containing sub-XX folders.
+      session:  The session folder name (e.g., "ses_pre" or "ses_post").
+      file_rel_path: The relative path (from each sub-XX/session folder) to the edges CSV.
+      output_file: The full path to the output CSV with averaged 3rd column.
+    """
+
+    # Identify subject directories (e.g. sub-11, sub-12, etc.)
+    subject_dirs = [
+        os.path.join(root_dir, d)
+        for d in os.listdir(root_dir)
+        if d.startswith("sub-") and os.path.isdir(os.path.join(root_dir, d))
+    ]
+    if not subject_dirs:
+        print(f"No subject directories found in {root_dir}")
+        return
+
+    reference_df = None   # Will store the first CSV read (the "reference")
+    collected_third_cols = []  # List of arrays for the 3rd column from each subject
+
+    for sub_dir in subject_dirs:
+        csv_path = os.path.join(sub_dir, session, file_rel_path)
+        if not os.path.exists(csv_path):
+            print(f"File not found: {csv_path}")
+            continue
+
+        try:
+            df = pd.read_csv(csv_path)  # assumes the CSV has a header row
+        except Exception as e:
+            print(f"Error reading {csv_path}: {e}")
+            continue
+
+        # The CSV must have at least 3 columns.
+        if df.shape[1] < 3:
+            print(f"{csv_path} does not have at least 3 columns. Skipping.")
+            continue
+
+        if reference_df is None:
+            # Use this first file as our "reference"
+            reference_df = df.copy()
+            collected_third_cols.append(df.iloc[:, 2].values)
+        else:
+            # Check if columns match the reference (both names and count)
+            if not df.columns.equals(reference_df.columns):
+                print(f"Column mismatch in {csv_path}. Skipping.")
+                continue
+            # Check if row counts match
+            if df.shape[0] != reference_df.shape[0]:
+                print(f"Row count mismatch in {csv_path}. Skipping.")
+                continue
+            # Check if first two columns are identical (exact same pairs in same order)
+            if not df.iloc[:, :2].equals(reference_df.iloc[:, :2]):
+                print(f"First two columns mismatch in {csv_path}. Skipping.")
+                continue
+
+            # If everything matches, collect the 3rd column
+            collected_third_cols.append(df.iloc[:, 2].values)
+
+    if reference_df is None or not collected_third_cols:
+        print("No valid CSVs found to average.")
+        return
+
+    # Stack all the 3rd-column arrays and compute the mean row-wise
+    stacked = np.vstack(collected_third_cols)  # shape: (num_subjects, num_rows)
+    avg_third_col = stacked.mean(axis=0)       # shape: (num_rows,)
+
+    # Place the averaged values back into the 3rd column of the reference DataFrame
+    reference_df.iloc[:, 2] = avg_third_col
+
+    # Write out the final CSV (keeps original column names, row order, 1st & 2nd columns)
+    reference_df.to_csv(output_file, index=False)
+    print("Averaged edges saved to:", output_file)
+
+
+root_dir = "/Users/nikitakaruzin/Desktop/Research/Picht/j_stats"
+output_dir = os.path.join(root_dir, "group_analysis", "t90")
+os.makedirs(output_dir, exist_ok=True)
+
+# For ses_pre node metrics:
+average_group_file(
+    root_dir=root_dir,
+    session="ses_pre",
+    file_rel_path="connectome_stats/unthresholded/hcpmmp1_minmax_unmodified_node_metrics.csv",
+    output_file=os.path.join(output_dir, "unthresholded_node_metrics.csv")
+)
+
+# For ses_pre edge metrics:
+average_third_column_edges(
+    root_dir=root_dir,
+    session="ses_pre",
+    file_rel_path="connectome_stats/unthresholded/hcpmmp1_minmax_unmodified_top_50_edges.csv",
+    output_file=os.path.join(output_dir, "edgesavgNT.csv")
+)
+
+# For ses_post node metrics:
+average_group_file(
+    root_dir=root_dir,
+    session="ses_post",
+    file_rel_path="connectome_stats/t90/hcpmmp1_invleng_t90_node_metrics.csv",
+    output_file=os.path.join(output_dir, "nodes_post_invleng.csv")
+)
+
+# For ses_post edge metrics:
+average_third_column_edges(
+    root_dir=root_dir,
+    session="ses_post",
+    file_rel_path="connectome_stats/t90/hcpmmp1_invleng_t90_top_50_edges.csv",
+    output_file=os.path.join(output_dir, "edges_post_invleng.csv")
+)
+
