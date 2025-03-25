@@ -23,9 +23,7 @@ def main():
     args = get_args()
     subject_dirs = get_subject_dirs(args.root)
     logs(args.root)
-    """
     preprocessing_pipeline(args.root, args.nthreads)
-    """
     sessions = ['ses_pre', 'ses_post']
     for subj_dir in subject_dirs:
         for session in sessions:
@@ -33,14 +31,12 @@ def main():
             paths = get_subject_paths(session_dir)
             subj_ses = subj_dir + '_' + session
             subject_id_ses = f"{os.path.basename(subj_dir)}_{session}"
-            """
             fancy_print("Segmenting tracts, endings, and generating TOMs", subj_ses)
             tract_and_endings_segmentation_TOMs(paths)
             fancy_print("iFOD2 Track generation, resampling and calculating metrics", subj_ses)
             tractography_resample_and_extract_metrics(paths, args.nthreads)
             fancy_print("TractSeg tracking and tractometry", subj_ses)
             tractseg_tracking_and_tractometry(args.root, paths, subj_dir, session_dir, session)
-            """
             fancy_print("Generating Freesurfer/HCP-based atlas", subj_ses)
             freesurfer_atlas_generation(paths, args.nthreads, subject_id_ses)
             fancy_print("Registering 5tt to dwi", subj_ses)
