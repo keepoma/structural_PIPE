@@ -21,7 +21,7 @@ def main():
     args = get_args()
     subject_dirs = get_subject_dirs(args.root)
     logs(args.root)
-    #preprocessing_pipeline(args.root, args.nthreads)
+    preprocessing_pipeline(args.root, args.nthreads)
     sessions = ['ses_pre', 'ses_post']
     for subj_dir in subject_dirs:
         for session in sessions:
