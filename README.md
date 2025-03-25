@@ -1,6 +1,6 @@
-# Image Guidance Lab – Structural Data Processing Pipelines
+# Image Guidance Lab – DWI Data Processing Pipelines
 
-This repository contains the code developed during my 2-month internship at the Image Guidance Lab (IGL) at Charité – Universitätsmedizin Berlin, focused on DWI neuroimaging data processing.
+This repository contains the code developed during my 2-month internship at the Image Guidance Lab (IGL) at Charité – Universitätsmedizin Berlin, focused on DWI data processing.
 
 ## Folder Structure:
 
