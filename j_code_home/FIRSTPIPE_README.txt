@@ -1,6 +1,30 @@
-1. Make sure to install all required software packages (e.g., MRtrix, ANTs, FSL, TractSeg, etc.) must be installed
-2. Python version must be <= 3.11 for proper functioning with MRtrix outdated (include version here) "imp" module,
-this can be achieved my creating and activating a py311 conda environment
-3. After activating conda env, execute main_first_pipe.py from terminal located in the same directory
-4. The command expects a --root argument to study subjects directory,
-example: python3 main_first_pipe.py --root "/media/nas/nikita/test_study"
+# Structural Data Processing Pipelines (BIDS-Compatible)
+
+This folder contains pipelines adapted to the BIDS format for structural data processing. Before running the pipelines, ensure all requirements are met.
+
+## 1. Software Requirements
+
+Make sure the following software packages are installed:
+-MRtrix3
+-ANTs
+-FSL
+-TractSeg
+
+## 2. Python Version Compatibility
+For proper functioning with MRtrix (which uses the outdated "imp" module), Python must be ≤ 3.11.
+To ensure compatibility, create and activate a Conda environment with Python 3.11. 
+
+## 3. Running the Pipelines
+After activating your Conda environment execute the desired pipeline from the terminal:
+-**j_complete_pipe.py**
+Runs preprocessing and both the regional and connectome generation pipelines for pre- and post-therapy sessions for all subjects in the specified root directory.
+-**j_connectome_pipe.py**
+Runs preprocessing and generates the connectome.
+-**j_gen_bundle.py**
+Runs preprocessing and generates bundles.
+
+Note: The statistical analysis pipelines have been adapted for my specific needs and may not be relevant for other users.
+
+## 4. Usage Example
+The command expects a `--root` argument that points to the study subjects directory. For example:
+`python3 j_complete_pipe.py --root "/media/nas/nikita/test_study"`
